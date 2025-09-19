@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>TS Router — Examples</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<nav class="nav">
+    <a href="/">Home</a>
+    <a href="/dashboard">Dashboard (guard)</a>
+    <a href="/users/42?tab=posts#details">User 42</a>
+    <a href="/unknown">Unknown (404)</a>
+    <a href="/redirect">Redirect → /dashboard</a>
+    <a href="/?anchor#section">Anchor</a>
+</nav>
+
+<div id="app"></div>
+
+<script type="module" src="/main.ts"></script>
+</body>
+</html>

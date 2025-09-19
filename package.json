@@ -1,0 +1,52 @@
+{
+  "name": "@icrusai/ts-router",
+  "version": "0.0.0",
+  "description": "Lightweight TS router + layout/page primitives (no framework)",
+  "license": "MIT",
+  "author": "Artem Bazhenov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IcrusaI/ts-router.git"
+  },
+  "bugs": {
+    "url": "https://github.com/IcrusaI/ts-router/issues"
+  },
+  "homepage": "https://github.com/IcrusaI/ts-router#readme",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rimraf dist && vite build && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "semantic-release": "semantic-release",
+    "dev": "vite",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "prepublishOnly": "npm run build",
+    "examples": "npm run build && vite --config examples/vite.examples.config.ts"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.6",
+    "@semantic-release/npm": "^12.0.2",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
+    "rimraf": "^5.0.5",
+    "semantic-release": "^24.2.8",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.20"
+  }
+}
