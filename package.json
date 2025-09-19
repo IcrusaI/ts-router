@@ -1,6 +1,6 @@
 {
   "name": "@icrusai/ts-router",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Lightweight TS router + layout/page primitives (no framework)",
   "license": "MIT",
   "author": "Artem Bazhenov",
@@ -22,6 +22,9 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     }
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "sideEffects": false,
   "files": [
