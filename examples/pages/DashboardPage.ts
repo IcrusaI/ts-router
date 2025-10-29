@@ -2,7 +2,7 @@ import { Page } from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
 
 export default class DashboardPage extends Page<"header" | "sidebar" | "content"> {
-    public getTitle(): string { return "Dashboard"; }
+    title = "Dashboard";
 
     protected renderStructure() {
         const shell = new ShellLayout();

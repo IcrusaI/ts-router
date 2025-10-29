@@ -1,6 +1,6 @@
 {
   "name": "@icrusai/ts-router",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Lightweight TS router + layout/page primitives (no framework)",
   "license": "MIT",
   "author": "Artem Bazhenov",
@@ -50,6 +50,6 @@
     "semantic-release": "^24.2.8",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.6.2",
-    "vite": "^5.4.20"
+    "vite": "^7.1.12"
   }
 }

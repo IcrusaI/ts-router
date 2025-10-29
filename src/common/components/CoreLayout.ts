@@ -270,7 +270,23 @@ export default abstract class CoreLayout {
      * @throws Если {@link renderStructure} вернул неподдерживаемый тип.
      */
     private ensureRoot(): void {
-        const node = this.renderStructure();
+        let node = this.renderStructure();
+
+        // ── 0) Строка-HTML: разрешаем ровно один корневой элемент
+        if (typeof node === 'string') {
+            const tpl = document.createElement('template');
+            tpl.innerHTML = node.trim();
+
+            const { firstElementChild, childElementCount } = tpl.content;
+            if (childElementCount !== 1 || !firstElementChild) {
+                throw new Error(
+                    'renderStructure(): HTML-строка должна содержать ровно один корневой элемент. ' +
+                    'Пример: <section>...</section>',
+                );
+            }
+
+            node = firstElementChild as HTMLElement;
+        }
 
         // 1) Возвращён дочерний layout: создаём host и откладываем attach до mountTo()
         if (isLayoutLike(node)) {
@@ -334,13 +350,17 @@ export default abstract class CoreLayout {
     /**
      * Построить DOM-структуру компонента.
      *
-     * Возвращаемое значение:
-     * - `HTMLElement` — станет корневым DOM данного layout’а;
-     * - `LayoutLike` — дочерний layout, который будет автоматически
-     *   смонтирован внутрь специального host-контейнера при первом `mountTo()`.
-     *   Для каскадного destroy ребёнка рекомендуется подключить ChildrenFeature.
+     * Возможные варианты возвращаемого значения:
+     *
+     * - **`HTMLElement`** — станет корневым DOM-элементом данного layout’а;
+     * - **`string`** — HTML-строка, которая **должна содержать ровно один корневой элемент**;
+     * - **`LayoutLike`** — дочерний layout, который будет автоматически
+     *   смонтирован внутрь специального host-контейнера при первом вызове {@link mountTo}.
+     *   Для каскадного уничтожения ребёнка рекомендуется подключить `ChildrenFeature`.
+     *
+     * @returns `HTMLElement` | `string` | `LayoutLike`
      */
-    protected abstract renderStructure(): HTMLElement | LayoutLike;
+    protected abstract renderStructure(): HTMLElement | LayoutLike | string;
 
     /** Хук: экземпляр создан, DOM ещё не построен. */
     protected created?(): void;

@@ -4,4 +4,4 @@ body { font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; ma
 .layout { display: grid; grid-template-columns: 240px 1fr; gap: 16px; }
 .sidebar { background: #fafafa; border: 1px solid #eee; padding: 12px; }
 .content { padding: 12px; border: 1px solid #eee; }
-.anchor { margin-top: 800px; padding: 8px; border: 1px dashed #aaa; }
+.anchor { margin-top: 1800px; padding: 8px; border: 1px dashed #aaa; }

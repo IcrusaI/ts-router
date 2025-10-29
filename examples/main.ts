@@ -1,6 +1,5 @@
 import { Router } from "@icrusai/ts-router";
 import NotFoundPage from "./pages/NotFoundPage";
-import ErrorPage from "./pages/ErrorPage";
 
 // Гвард авторизации
 const requireAuth = async (to: any) => {
@@ -28,7 +27,7 @@ router.register("/login", () => import("./pages/LoginPage"));
 router.register("/redirect", () => import("./pages/HomePage"), { redirectTo: "/dashboard" });
 
 // 404/ERROR
-router.setNotFound(() => NotFoundPage);
+router.setNotFound(NotFoundPage);
 router.setErrorPage(() => import("./pages/ErrorPage"));
 
 // go!

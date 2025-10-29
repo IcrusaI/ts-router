@@ -8,9 +8,7 @@ function getUserIdFromPath(): string {
 }
 
 export default class UserPage extends Page<"header" | "sidebar" | "content"> {
-    public getTitle(): string {
-        return `User ${getUserIdFromPath()}`;
-    }
+    title = `User ${getUserIdFromPath()}`;
 
     protected renderStructure() {
         const shell = new ShellLayout();

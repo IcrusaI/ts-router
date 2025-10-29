@@ -1,7 +1,7 @@
 import { Page } from "@icrusai/ts-router";
 
 export default class LoginPage extends Page {
-    public getTitle(): string { return "Login"; }
+    title = "Login";
 
     protected renderStructure(): HTMLElement {
         const el = document.createElement("div");

@@ -2,7 +2,7 @@ import { Page } from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
 
 export default class HomePage extends Page<"header" | "sidebar" | "content"> {
-    public getTitle(): string { return "Home"; }
+    title = "Home";
 
     protected renderStructure() {
         const shell = new ShellLayout();
@@ -29,5 +29,25 @@ export default class HomePage extends Page<"header" | "sidebar" | "content"> {
         void shell.slots.setSlot("content", content);
 
         return shell;
+    }
+
+    private interval?: NodeJS.Timeout;
+
+    created() {
+        let counter = 0;
+
+        this.interval = setInterval(() => {
+            this.title = "●".repeat(counter) + " Home";
+
+            counter++;
+
+            if (counter > 3) {
+                counter = 0;
+            }
+        }, 700);
+    }
+
+    beforeUnmount() {
+        clearInterval(this.interval)
     }
 }

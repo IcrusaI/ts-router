@@ -1,4 +1,5 @@
 import Layout from "@/common/components/Layout";
+import {effect, signal} from "@/common/utils/reactive";
 
 /**
  * =======================================================================
@@ -37,20 +38,56 @@ import Layout from "@/common/components/Layout";
  */
 export default abstract class Page<TSlots extends string = never> extends Layout<TSlots> {
     /**
-     * Должен вернуть человекочитаемый заголовок страницы.
-     * Роутер устанавливает это значение в `document.title` после монтирования.
+     * @deprecated
+     * Метод оставлен для обратной совместимости.
+     * Возвращает текущее значение реактивного заголовка {@link title}.
      *
-     * Рекомендуется возвращать непустую строку. Если вернуть пустую строку,
-     * роутер применит заголовок по умолчанию из своих настроек.
-     *
-     * @example
+     * Вместо него рекомендуется использовать:
      * ```ts
-     * public getTitle(): string {
-     *   return "Dashboard";
-     * }
+     * this.title = "My Page";
      * ```
      */
-    public abstract getTitle(): string;
+    public getTitle(): string {
+        return this.title;
+    }
+
+    /** приватный сигнал; не светится в публичных типах */
+    private readonly _title$ = signal<string>("");
+
+    /**
+     * Реактивный заголовок страницы.
+     *
+     * Используется для отображения названия текущей страницы во вкладке браузера.
+     * Роутер автоматически подписывается на изменения этого сигнала и
+     * обновляет `document.title` при каждом обновлении.
+     *
+     * Пример:
+     * ```ts
+     * this.title$.set("Dashboard");
+     * ```
+     *
+     * Также можно использовать `computed` для вычисляемых значений:
+     * ```ts
+     * import { computed, signal } from "@/common/utils/reactive";
+     *
+     * this.userName$ = signal("Guest");
+     * this.title$ = computed(() => `User: ${this.userName$()}`);
+     * ```
+     */
+    public get title(): string {
+        return this._title$();
+    }
+    public set title(v: string) {
+        this._title$.set(v);
+    }
+
+    /**
+     * Подписка на изменения заголовка. Возвращает функцию отписки.
+     * Роутер использует это, чтобы синхронизировать document.title.
+     */
+    public watchTitle(cb: (title: string) => void): () => void {
+        return effect(() => cb(this._title$()));
+    }
 
     /**
      * Удобный доступ к параметрам текущей query-строки (`?key=value`).

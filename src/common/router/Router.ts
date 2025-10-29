@@ -64,6 +64,7 @@ import { PageCtor, PageProvider } from "@/common/router/types";
 import RouterOptions from "@/common/router/RouterOptions";
 import RouteOptions from "@/common/router/RouteOptions";
 import NavigationTarget from "@/common/router/NavigationTarget";
+import {effect} from "@/common/utils/reactive";
 
 /**
  * Центральный класс маршрутизации приложения.
@@ -122,6 +123,24 @@ export default class Router {
      * @private
      */
     private readonly defaultTitle: string;
+
+    /**
+     * Функция-диспозер (отписка) для текущего эффекта,
+     * синхронизирующего `document.title` с реактивным заголовком {@link Page.title}.
+     *
+     * Каждый раз при монтировании новой страницы (`mountPage`) создаётся новый
+     * эффект через {@link effect}, который подписывается на `page.title$()`.
+     * Когда происходит переход на другую страницу, предыдущий эффект вызывается
+     * (через `offTitleEffect()`), чтобы:
+     *  - снять все подписки с предыдущего сигнала;
+     *  - предотвратить утечки памяти;
+     *  - исключить дублирование обновлений заголовка.
+     *
+     * Значение `null` означает, что активный эффект отсутствует.
+     *
+     * @private
+     */
+    private offTitleEffect: (() => void) | null = null;
 
     /**
      * Навигационный токен для защиты от гонок.
@@ -401,16 +420,47 @@ export default class Router {
 
     /**
      * Корректно размонтирует предыдущую страницу и монтирует новую в контейнер,
-     * а также обновляет `document.title` (если страница предоставляет `getTitle()`).
+     * а также выполняет реактивную синхронизацию заголовка документа.
      *
-     * @param page Экземпляр страницы для монтирования.
+     * ## Логика работы:
+     * 1. Если ранее был установлен эффект синхронизации заголовка —
+     *    он удаляется (чтобы избежать утечек и дублирования).
+     * 2. Текущая страница (`currentPage`), если существует, уничтожается
+     *    вызовом {@link Page.destroy}.
+     * 3. Новая страница монтируется в основной контейнер приложения
+     *    методом {@link Page.mountTo}.
+     * 4. Устанавливается реактивный эффект {@link effect}, который:
+     *    - подписывается на сигнал {@link Page.title};
+     *    - автоматически обновляет `document.title` при каждом изменении заголовка;
+     *    - сбрасывает заголовок на `defaultTitle`, если значение пустое.
+     * 5. Эффект сохраняется в `offTitleEffect`, чтобы его можно было
+     *    безопасно удалить при следующем переходе.
+     *
+     * @param page Экземпляр страницы, которую требуется смонтировать.
+     * @returns Промис, завершающийся после монтирования страницы
+     *          и установки эффекта синхронизации заголовка.
+     *
+     * @example
+     * ```ts
+     * const userPage = new UserPage();
+     * await router.mountPage(userPage);
+     * // document.title теперь всегда синхронизирован с userPage.title$()
+     * ```
+     *
      * @internal
      */
     private async mountPage(page: Page): Promise<void> {
+        if (this.offTitleEffect) { this.offTitleEffect(); this.offTitleEffect = null; }
         await this.currentPage?.destroy();
+
         await page.mountTo(this.container);
         this.currentPage = page;
-        document.title = page.getTitle() || this.defaultTitle;
+
+        document.title = page.title || this.defaultTitle;
+
+        this.offTitleEffect = page.watchTitle((t) => {
+            document.title = t || this.defaultTitle;
+        });
     }
 
     /**
