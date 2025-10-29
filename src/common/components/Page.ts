@@ -1,5 +1,5 @@
 import Layout from "@/common/components/Layout";
-import {effect, signal} from "@/common/utils/reactive";
+import {effect, ReadWriteSignal, signal} from "@/common/utils/reactive";
 
 /**
  * =======================================================================
@@ -52,7 +52,12 @@ export default abstract class Page<TSlots extends string = never> extends Layout
     }
 
     /** приватный сигнал; не светится в публичных типах */
-    private readonly _title$ = signal<string>("");
+    private _title$?: ReadWriteSignal<string>;
+
+    private get _titleSig(): ReadWriteSignal<string> {
+        // создастся при первом доступе (в т.ч. из created())
+        return (this._title$ ??= signal<string>(""));
+    }
 
     /**
      * Реактивный заголовок страницы.
@@ -63,22 +68,14 @@ export default abstract class Page<TSlots extends string = never> extends Layout
      *
      * Пример:
      * ```ts
-     * this.title$.set("Dashboard");
-     * ```
-     *
-     * Также можно использовать `computed` для вычисляемых значений:
-     * ```ts
-     * import { computed, signal } from "@/common/utils/reactive";
-     *
-     * this.userName$ = signal("Guest");
-     * this.title$ = computed(() => `User: ${this.userName$()}`);
+     * title = Dashboard;
      * ```
      */
     public get title(): string {
-        return this._title$();
+        return this._titleSig();
     }
     public set title(v: string) {
-        this._title$.set(v);
+        this._titleSig.set(v);
     }
 
     /**
@@ -86,7 +83,7 @@ export default abstract class Page<TSlots extends string = never> extends Layout
      * Роутер использует это, чтобы синхронизировать document.title.
      */
     public watchTitle(cb: (title: string) => void): () => void {
-        return effect(() => cb(this._title$()));
+        return effect(() => cb(this._titleSig()));
     }
 
     /**
