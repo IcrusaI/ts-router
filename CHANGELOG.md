@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/IcrusaI/ts-router/compare/v1.1.0...v1.1.1) (2025-10-29)
+
+### Bug Fixes
+
+* Поправлен баг при внесении изменений заголовка в методе created() ([9eb75dc](https://github.com/IcrusaI/ts-router/commit/9eb75dc65b49cc384b591070fdc51e18247048c9))
+
 ## [1.1.0](https://github.com/IcrusaI/ts-router/compare/v1.0.0...v1.1.0) (2025-10-29)
 
 ### Features
