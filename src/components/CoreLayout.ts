@@ -2,6 +2,24 @@ import { renderTemplate } from "@/utils/template";
 import { signal, effect } from "@/utils/reactive";
 
 /**
+ * Internal symbol used to mark whether reactive properties have been
+ * initialised on a CoreLayout instance. This symbol lives outside of the
+ * class definition to avoid collisions on `this` and to keep it
+ * non-enumerable.
+ */
+const _reactiveInitialised = Symbol("__reactiveInitialised");
+
+/**
+ * Helper interface describing a constructor function that may carry
+ * reactive metadata. Classes decorated with {@link reactive} attach a
+ * `__reactiveProps` set to their constructor to record which properties
+ * were decorated.
+ */
+interface ReactiveConstructor extends Function {
+  __reactiveProps?: Set<string>;
+}
+
+/**
  * Тип возвращаемого значения для асинхронных хуков жизненного цикла.
  * Хук может быть синхронным (void) или асинхронным (Promise<void>).
  */
@@ -119,6 +137,79 @@ export default abstract class CoreLayout {
         this.created?.();
     }
 
+    /**
+     * Once per-instance routine to upgrade declared fields into reactive
+     * properties. Fields that start with a dollar sign (`$`) or that were
+     * decorated with the `@reactive` decorator will be converted into
+     * getters/setters backed by a signal. This method is called lazily
+     * just before the first template is rendered, so that class field
+     * initialisers in derived classes have already executed. It avoids
+     * scanning repeatedly by marking the instance with a private symbol.
+     */
+    private ensureReactiveProps(): void {
+        // Only run once per instance
+        if ((this as any)[_reactiveInitialised]) return;
+        (this as any)[_reactiveInitialised] = true;
+
+        // Gather property names explicitly marked via @reactive
+        const ctor: ReactiveConstructor = (this as any).constructor;
+        const marked: Set<string> = ctor.__reactiveProps ?? new Set<string>();
+
+        // Names which should never be made reactive (framework internals).  
+        // "title" is handled specially by Page and has its own signal.
+        const reserved = new Set<string>([
+            'state',
+            'children',
+            'slots',
+            'title',
+        ]);
+
+        // Iterate over own enumerable properties. Field initialisers are
+        // defined on the instance, so they will show up here. Methods live
+        // on the prototype and will not be considered.
+        for (const key of Object.keys(this)) {
+            // Skip private/underscore-prefixed names and reserved names
+            if (key.startsWith('_')) continue;
+            if (reserved.has(key)) continue;
+
+            const value: any = (this as any)[key];
+
+            // Skip functions (methods) entirely
+            if (typeof value === 'function') continue;
+
+            // Determine whether this property should be reactive: either it
+            // begins with `$` or is present in the set of marked props
+            const shouldReactive = key.startsWith('$') || marked.has(key);
+            if (!shouldReactive) continue;
+
+            // If a getter/setter already exists, leave it as is
+            const desc = Object.getOwnPropertyDescriptor(this, key);
+            if (desc && (desc.get || desc.set)) continue;
+
+            // If the value itself is already a signal (created via signal()),
+            // simply proxy through to its getter/setter
+            if (typeof value === 'function' && (value as any).__isSignal) {
+                const sig = value as any;
+                Object.defineProperty(this, key, {
+                    get: () => sig(),
+                    set: (v: any) => sig.set(v),
+                    enumerable: true,
+                    configurable: true,
+                });
+                continue;
+            }
+
+            // Otherwise create a new signal wrapping the current value
+            const sig = signal(value);
+            Object.defineProperty(this, key, {
+                get: () => sig(),
+                set: (v: any) => sig.set(v),
+                enumerable: true,
+                configurable: true,
+            });
+        }
+    }
+
     // —— плагины ————————————————————————————————————————————————
 
     /**
@@ -171,52 +262,59 @@ export default abstract class CoreLayout {
 
     /**
      * Утилита для рендеринга HTML‑шаблонов со вставками вида `{{ path.to.value }}`.
+     * Вы можете писать разметку прямо в шаблонной строке, а затем передать
+     * объект контекста, в котором будут искаться значения для подстановки.
      *
-     * При первом вызове заменяет каждое выражение `{{ ... }}` на
-     * `<span data-bind="id"></span>` и запоминает выражение.
-     * Затем с помощью {@link effect} подписывается на изменения
-     * использованных значений: если свойство реактивно (создано
-     * через {@link signal} и имеющее геттер/сеттер), DOM автоматически
-     * обновляется.
+     * Например:
+     * ```ts
+     * protected renderStructure(): HTMLElement {
+     *   return this.html(`
+     *     <div data-class="{{style.actions}}">
+     *       <button data-class="{{style.auth}}">{{ml.signIn}}</button>
+     *       <button data-class="{{style.auth}}">{{ml.signUp}}</button>
+     *     </div>
+     *   `, { ml, style });
+     * }
+     * ```
      *
-     * Шаблон не должен содержать корневой контейнер без плейсхолдеров,
-     * иначе элемент будет перезатираться при обновлениях — вместо этого
-     * внутрь тега помещаются только участки, которые будут реактивны.
+     * Для разбора шаблона используется {@link renderTemplate}. Метод не
+     * изменяет DOM самостоятельно;
      *
      * @param tpl HTML‑шаблон со вставками в фигурных скобках
+     * @param ctx Объект, содержащий значения для подстановки
      * @returns DOM‑элемент, соответствующий корню шаблона
      */
     protected html(tpl: string): HTMLElement {
-        const binds: Array<{ id: number; expr: string }> = [];
-        let counter = 0;
-        // заменяем {{ expr }} на span с уникальным data-bind
+        this.ensureReactiveProps();
+
+        const binds: { id: number; expr: string }[] = [];
+        let i = 0;
+
+        // заменяем КАЖДЫЙ {{ expr }} на отдельный span
         const compiled = tpl.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_m, expr) => {
-            const id = counter++;
-            binds.push({ id, expr: String(expr).trim() });
+            const id = i++;
+            binds.push({ id, expr: expr.trim() });
             return `<span data-bind="${id}"></span>`;
         });
-        // создаём DOM по скомпилированному шаблону; контекст не нужен, реакции исполнятся позже
-        const root = renderTemplate(compiled, {});
-        // для каждой связки создаём реактивный эффект
+
+        const root = renderTemplate(compiled, {}); // контекст тут не нужен, берём this в effect
+
         for (const { id, expr } of binds) {
             const node = root.querySelector<HTMLElement>(`[data-bind="${id}"]`);
             if (!node) continue;
+
             effect(() => {
-                // вычисляем выражение относительно текущего экземпляра
-                const parts = expr.split('.');
                 let value: any = this as any;
-                for (const part of parts) {
+                for (const part of expr.split('.')) {
                     if (value == null) break;
                     value = value[part];
                 }
-                // если получили сигнал, вызываем его
-                if (typeof value === 'function' && typeof (value as any).set === 'function') {
-                    value = value.call(this);
-                }
+                if (typeof value === 'function') value = value.call(this);
                 node.textContent = value != null ? String(value) : '';
             });
         }
-        return root;
+
+        return root as HTMLElement;
     }
 
     // —— lifecycle ————————————————————————————————————————————————
@@ -396,28 +494,6 @@ export default abstract class CoreLayout {
     ): void {
         el.addEventListener(type, handler);
         this.listeners.push(() => el.removeEventListener(type, handler));
-    }
-
-    /**
-     * Создать реактивное свойство на текущем экземпляре.
-     *
-     * Вызывает {@link signal} под капотом и подставляет геттер/сеттер
-     * для доступа к значению как к обычному полю. Это упрощает
-     * определение state-полей на страницах: вместо создания приватного
-     * сигнала и написания геттера/сеттера, достаточно вызвать
-     * `this.$state('count', 0)` в `created()`.
-     *
-     * @param key Имя свойства, которое станет реактивным
-     * @param initial Начальное значение
-     */
-    protected $state<K extends keyof this>(key: K, initial: this[K]): void {
-        const s = signal(initial);
-        Object.defineProperty(this, key, {
-            get: () => (s as any)(),
-            set: (v: this[K]) => (s as any).set(v),
-            enumerable: true,
-            configurable: true,
-        });
     }
 
     // —— overridables ————————————————————————————————————————————————

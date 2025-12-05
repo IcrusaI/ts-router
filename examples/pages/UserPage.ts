@@ -8,6 +8,12 @@ function getUserIdFromPath(): string {
 }
 
 export default class UserPage extends Page<"header" | "sidebar" | "content"> {
+    public title!: string;
+
+    protected created() {
+        this.title = `User ${getUserIdFromPath()}`;
+    }
+
     protected renderStructure() {
         const shell = new ShellLayout();
 
@@ -31,10 +37,5 @@ export default class UserPage extends Page<"header" | "sidebar" | "content"> {
         void shell.slots.setSlot("sidebar", sidebar);
         void shell.slots.setSlot("content", content);
         return shell;
-    }
-
-    created() {
-        // динамический заголовок по текущему id пользователя
-        this.title = `User ${getUserIdFromPath()}`;
     }
 }

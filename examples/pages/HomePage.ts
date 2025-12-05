@@ -2,6 +2,11 @@ import { Page } from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
 
 export default class HomePage extends Page<"header" | "sidebar" | "content"> {
+    /**
+     * Заголовок страницы устанавливается в created(). Не присваивайте здесь.
+     */
+    public title!: string;
+
     protected renderStructure() {
         const shell = new ShellLayout();
 
@@ -32,14 +37,12 @@ export default class HomePage extends Page<"header" | "sidebar" | "content"> {
     private interval?: NodeJS.Timeout;
 
     created() {
+        // Устанавливаем исходное значение заголовка
         this.title = "Home";
         let counter = 0;
-
         this.interval = setInterval(() => {
             this.title = "●".repeat(counter) + " Home";
-
             counter++;
-
             if (counter > 3) {
                 counter = 0;
             }
