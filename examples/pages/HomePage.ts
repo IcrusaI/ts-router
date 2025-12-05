@@ -2,8 +2,6 @@ import { Page } from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
 
 export default class HomePage extends Page<"header" | "sidebar" | "content"> {
-    title = "Home";
-
     protected renderStructure() {
         const shell = new ShellLayout();
 
@@ -34,6 +32,7 @@ export default class HomePage extends Page<"header" | "sidebar" | "content"> {
     private interval?: NodeJS.Timeout;
 
     created() {
+        this.title = "Home";
         let counter = 0;
 
         this.interval = setInterval(() => {

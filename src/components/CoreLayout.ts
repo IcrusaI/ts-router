@@ -171,57 +171,52 @@ export default abstract class CoreLayout {
 
     /**
      * Утилита для рендеринга HTML‑шаблонов со вставками вида `{{ path.to.value }}`.
-     * Вы можете писать разметку прямо в шаблонной строке, а затем передать
-     * объект контекста, в котором будут искаться значения для подстановки.
      *
-     * Например:
-     * ```ts
-     * protected renderStructure(): HTMLElement {
-     *   return this.html(`
-     *     <div data-class="{{style.actions}}">
-     *       <button data-class="{{style.auth}}">{{ml.signIn}}</button>
-     *       <button data-class="{{style.auth}}">{{ml.signUp}}</button>
-     *     </div>
-     *   `, { ml, style });
-     * }
-     * ```
+     * При первом вызове заменяет каждое выражение `{{ ... }}` на
+     * `<span data-bind="id"></span>` и запоминает выражение.
+     * Затем с помощью {@link effect} подписывается на изменения
+     * использованных значений: если свойство реактивно (создано
+     * через {@link signal} и имеющее геттер/сеттер), DOM автоматически
+     * обновляется.
      *
-     * Для разбора шаблона используется {@link renderTemplate}. Метод не
-     * изменяет DOM самостоятельно;
+     * Шаблон не должен содержать корневой контейнер без плейсхолдеров,
+     * иначе элемент будет перезатираться при обновлениях — вместо этого
+     * внутрь тега помещаются только участки, которые будут реактивны.
      *
      * @param tpl HTML‑шаблон со вставками в фигурных скобках
-     * @param ctx Объект, содержащий значения для подстановки
      * @returns DOM‑элемент, соответствующий корню шаблона
      */
     protected html(tpl: string): HTMLElement {
-        const binds: { id: number; expr: string }[] = [];
-        let i = 0;
-
-        // заменяем КАЖДЫЙ {{ expr }} на отдельный span
+        const binds: Array<{ id: number; expr: string }> = [];
+        let counter = 0;
+        // заменяем {{ expr }} на span с уникальным data-bind
         const compiled = tpl.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_m, expr) => {
-            const id = i++;
-            binds.push({ id, expr: expr.trim() });
+            const id = counter++;
+            binds.push({ id, expr: String(expr).trim() });
             return `<span data-bind="${id}"></span>`;
         });
-
-        const root = renderTemplate(compiled, {}); // контекст тут не нужен, берём this в effect
-
+        // создаём DOM по скомпилированному шаблону; контекст не нужен, реакции исполнятся позже
+        const root = renderTemplate(compiled, {});
+        // для каждой связки создаём реактивный эффект
         for (const { id, expr } of binds) {
             const node = root.querySelector<HTMLElement>(`[data-bind="${id}"]`);
             if (!node) continue;
-
             effect(() => {
+                // вычисляем выражение относительно текущего экземпляра
+                const parts = expr.split('.');
                 let value: any = this as any;
-                for (const part of expr.split('.')) {
+                for (const part of parts) {
                     if (value == null) break;
                     value = value[part];
                 }
-                if (typeof value === 'function') value = value.call(this);
+                // если получили сигнал, вызываем его
+                if (typeof value === 'function' && typeof (value as any).set === 'function') {
+                    value = value.call(this);
+                }
                 node.textContent = value != null ? String(value) : '';
             });
         }
-
-        return root as HTMLElement;
+        return root;
     }
 
     // —— lifecycle ————————————————————————————————————————————————
@@ -403,14 +398,25 @@ export default abstract class CoreLayout {
         this.listeners.push(() => el.removeEventListener(type, handler));
     }
 
+    /**
+     * Создать реактивное свойство на текущем экземпляре.
+     *
+     * Вызывает {@link signal} под капотом и подставляет геттер/сеттер
+     * для доступа к значению как к обычному полю. Это упрощает
+     * определение state-полей на страницах: вместо создания приватного
+     * сигнала и написания геттера/сеттера, достаточно вызвать
+     * `this.$state('count', 0)` в `created()`.
+     *
+     * @param key Имя свойства, которое станет реактивным
+     * @param initial Начальное значение
+     */
     protected $state<K extends keyof this>(key: K, initial: this[K]): void {
         const s = signal(initial);
-
         Object.defineProperty(this, key, {
-            configurable: true,
+            get: () => (s as any)(),
+            set: (v: this[K]) => (s as any).set(v),
             enumerable: true,
-            get: () => s(),
-            set: (v: this[K]) => s.set(v),
+            configurable: true,
         });
     }
 

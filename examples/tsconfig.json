@@ -2,6 +2,7 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "types": ["node"],
     "paths": {
       "@icrusai/ts-router": ["../dist/index.d.ts"]
     }
