@@ -1,5 +1,5 @@
-import NavigationTarget from "@/common/router/NavigationTarget";
-import Page from "@/common/components/Page";
+import NavigationTarget from "@/router/NavigationTarget";
+import Page from "@/components/Page";
 
 /** Middleware‑guard, вызывается перед каждым переходом. */
 export type BeforeEachHook = (

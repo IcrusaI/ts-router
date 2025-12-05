@@ -1,5 +1,5 @@
-import Layout from "@/common/components/Layout";
-import {effect, ReadWriteSignal, signal} from "@/common/utils/reactive";
+import Layout from "@/components/Layout";
+import { effect, ReadWriteSignal, signal } from "@/utils/reactive";
 
 /**
  * =======================================================================
@@ -118,6 +118,6 @@ export default abstract class Page<TSlots extends string = never> extends Layout
      * @protected
      */
     protected get queryObj(): Record<string, string> {
-        return Object.fromEntries(this.query.entries());
+        return Object.fromEntries(this.query);
     }
 }

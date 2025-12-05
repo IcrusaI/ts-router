@@ -1,6 +1,6 @@
-import {Feature, isLayoutLike} from "@/common/components/CoreLayout";
-import CoreLayout from "@/common/components/CoreLayout";
-import { ChildrenFeature } from "@/common/components/feature/ChildrenFeature";
+import {Feature, isLayoutLike} from "@/components/CoreLayout";
+import CoreLayout from "@/components/CoreLayout";
+import { ChildrenFeature } from "@/components/feature/ChildrenFeature";
 
 /**
  * Фича «слотов» на базе `<template slot="name">` с поддержкой

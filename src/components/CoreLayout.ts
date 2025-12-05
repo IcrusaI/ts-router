@@ -1,3 +1,6 @@
+import { renderTemplate } from "@/utils/template";
+import { signal, effect } from "@/utils/reactive";
+
 /**
  * Тип возвращаемого значения для асинхронных хуков жизненного цикла.
  * Хук может быть синхронным (void) или асинхронным (Promise<void>).
@@ -164,6 +167,61 @@ export default abstract class CoreLayout {
         return arr.reduce<Promise<void>>(async (p, f) => {
             await p; await fn(f);
         }, Promise.resolve());
+    }
+
+    /**
+     * Утилита для рендеринга HTML‑шаблонов со вставками вида `{{ path.to.value }}`.
+     * Вы можете писать разметку прямо в шаблонной строке, а затем передать
+     * объект контекста, в котором будут искаться значения для подстановки.
+     *
+     * Например:
+     * ```ts
+     * protected renderStructure(): HTMLElement {
+     *   return this.html(`
+     *     <div data-class="{{style.actions}}">
+     *       <button data-class="{{style.auth}}">{{ml.signIn}}</button>
+     *       <button data-class="{{style.auth}}">{{ml.signUp}}</button>
+     *     </div>
+     *   `, { ml, style });
+     * }
+     * ```
+     *
+     * Для разбора шаблона используется {@link renderTemplate}. Метод не
+     * изменяет DOM самостоятельно;
+     *
+     * @param tpl HTML‑шаблон со вставками в фигурных скобках
+     * @param ctx Объект, содержащий значения для подстановки
+     * @returns DOM‑элемент, соответствующий корню шаблона
+     */
+    protected html(tpl: string): HTMLElement {
+        const binds: { id: number; expr: string }[] = [];
+        let i = 0;
+
+        // заменяем КАЖДЫЙ {{ expr }} на отдельный span
+        const compiled = tpl.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_m, expr) => {
+            const id = i++;
+            binds.push({ id, expr: expr.trim() });
+            return `<span data-bind="${id}"></span>`;
+        });
+
+        const root = renderTemplate(compiled, {}); // контекст тут не нужен, берём this в effect
+
+        for (const { id, expr } of binds) {
+            const node = root.querySelector<HTMLElement>(`[data-bind="${id}"]`);
+            if (!node) continue;
+
+            effect(() => {
+                let value: any = this as any;
+                for (const part of expr.split('.')) {
+                    if (value == null) break;
+                    value = value[part];
+                }
+                if (typeof value === 'function') value = value.call(this);
+                node.textContent = value != null ? String(value) : '';
+            });
+        }
+
+        return root as HTMLElement;
     }
 
     // —— lifecycle ————————————————————————————————————————————————
@@ -343,6 +401,17 @@ export default abstract class CoreLayout {
     ): void {
         el.addEventListener(type, handler);
         this.listeners.push(() => el.removeEventListener(type, handler));
+    }
+
+    protected $state<K extends keyof this>(key: K, initial: this[K]): void {
+        const s = signal(initial);
+
+        Object.defineProperty(this, key, {
+            configurable: true,
+            enumerable: true,
+            get: () => s(),
+            set: (v: this[K]) => s.set(v),
+        });
     }
 
     // —— overridables ————————————————————————————————————————————————

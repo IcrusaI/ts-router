@@ -1,5 +1,5 @@
-import type CoreLayout from "@/common/components/CoreLayout";
-import type { Feature } from "@/common/components/CoreLayout";
+import type CoreLayout from "@/components/CoreLayout";
+import type { Feature } from "@/components/CoreLayout";
 
 /**
  * Фича управления дочерними компонентами (каскадный жизненный цикл).

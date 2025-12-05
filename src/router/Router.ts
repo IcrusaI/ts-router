@@ -30,8 +30,8 @@
  *
  * @example Базовое использование
  * ```ts
- * import Router from "@/common/router/Router";
- * import NotFoundPage from "@/common/components/NotFoundPage";
+ * import Router from "@/router/Router";
+ * import NotFoundPage from "@/components/NotFoundPage";
  *
  * const router = new Router(document.getElementById("app")!, {
  *   basePath: "/",
@@ -58,13 +58,13 @@
  * ```
  */
 
-import Page from "@/common/components/Page";
-import ParsedRoute from "@/common/router/ParsedRoute";
-import { PageCtor, PageProvider } from "@/common/router/types";
-import RouterOptions from "@/common/router/RouterOptions";
-import RouteOptions from "@/common/router/RouteOptions";
-import NavigationTarget from "@/common/router/NavigationTarget";
-import {effect} from "@/common/utils/reactive";
+import Page from "@/components/Page";
+import ParsedRoute from "@/router/ParsedRoute";
+import { PageCtor, PageProvider } from "@/router/types";
+import RouterOptions from "@/router/RouterOptions";
+import RouteOptions from "@/router/RouteOptions";
+import NavigationTarget from "@/router/NavigationTarget";
+import {effect} from "@/utils/reactive";
 
 /**
  * Центральный класс маршрутизации приложения.
@@ -312,7 +312,7 @@ export default class Router {
             params: match.params,
             meta: match.opts,
             query: new URLSearchParams(search),
-            queryObj: Object.fromEntries(new URLSearchParams(search).entries()),
+            queryObj: Object.fromEntries(new URLSearchParams(search)),
         };
         const fromTarget = await this.resolveCurrentTarget();
 
@@ -379,7 +379,7 @@ export default class Router {
             params: m?.params ?? {},
             meta: m?.opts ?? {},
             query: new URLSearchParams(qs),
-            queryObj: Object.fromEntries(new URLSearchParams(qs).entries()),
+            queryObj: Object.fromEntries(new URLSearchParams(qs)),
         };
     }
 

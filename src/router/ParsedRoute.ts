@@ -1,5 +1,5 @@
-import RouteOptions from "@/common/router/RouteOptions";
-import { PageCtor } from "@/common/router/types";
+import RouteOptions from "@/router/RouteOptions";
+import { PageCtor } from "@/router/types";
 
 export default interface ParsedRoute {
     /** Оригинальный паттерн ("/posts/:slug") для отладки */

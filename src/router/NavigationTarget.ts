@@ -1,4 +1,4 @@
-import RouteOptions from "@/common/router/RouteOptions";
+import RouteOptions from "@/router/RouteOptions";
 
 /** Объект, передаваемый в middleware‑функции. */
 export default interface NavigationTarget {

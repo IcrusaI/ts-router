@@ -28,6 +28,7 @@ export function signal<T>(v: T): ReadWriteSignal<T> {
     const s = new SignalImpl<T>(v);
     const getter = (() => s.get()) as ReadWriteSignal<T>;
     getter.set = (nv: T) => s.set(nv);
+    (getter as any).__isSignal = true;
     return getter;
 }
 

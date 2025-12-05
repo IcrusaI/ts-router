@@ -1,6 +1,6 @@
-import CoreLayout from "@/common/components/CoreLayout";
-import { ChildrenFeature } from "@/common/components/feature/ChildrenFeature";
-import { SlotsFeature } from "@/common/components/feature/SlotsFeature";
+import CoreLayout from "@/components/CoreLayout";
+import { ChildrenFeature } from "@/components/feature/ChildrenFeature";
+import { SlotsFeature } from "@/components/feature/SlotsFeature";
 
 /**
  * Публичный layout-класс для потребителей библиотеки.
