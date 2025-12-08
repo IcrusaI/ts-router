@@ -266,8 +266,8 @@ export default abstract class Layout {
 
             if (!childrenFx?.attach) {
                 throw new Error(
-                    "renderStructure() вернул Layout, но ChildrenFeature не подключён. " +
-                    "Подключи feature: new ChildrenFeature() и обращайся как this.children."
+                    "renderStructure() returned a Layout instance, but ChildrenFeature is not attached. " +
+                    "Attach ChildrenFeature (this.children) before returning a child layout."
                 );
             }
             await childrenFx.attach(child, host);
@@ -338,8 +338,8 @@ export default abstract class Layout {
             const { firstElementChild, childElementCount } = tpl.content;
             if (childElementCount !== 1 || !firstElementChild) {
                 throw new Error(
-                    'renderStructure(): HTML-строка должна содержать ровно один корневой элемент. ' +
-                    'Пример: <section>...</section>',
+                    'renderStructure(): HTML string must contain exactly one root element. ' +
+                    'Example: <section>...</section>',
                 );
             }
 
@@ -358,7 +358,7 @@ export default abstract class Layout {
 
         // 2) Обычный HTMLElement
         if (!(node instanceof HTMLElement)) {
-            throw new Error("renderStructure() должен вернуть HTMLElement или Layout");
+            throw new Error("renderStructure() must return HTMLElement or Layout");
         }
         this.root = node;
         forEachFeature(this, f => f.onRootCreated?.(node));

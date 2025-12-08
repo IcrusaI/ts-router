@@ -1,7 +1,7 @@
 import {isLayoutLike} from "@/components/Layout";
 import Layout from "@/components/Layout";
 import { ChildrenFeature } from "@/components/feature/ChildrenFeature";
-import {Feature} from "@/components/Feature";
+import { Feature as FeatureContract } from "@/components/Feature";
 
 /**
  * Фича «слотов» на базе `<template slot="name">` с поддержкой
@@ -12,7 +12,7 @@ import {Feature} from "@/components/Feature";
  * - Однократная «обёртка» шаблона маркерами-комментариями
  *   `<!--slot:name-start--> ... <!--slot:name-end-->` (см. {@link ensureWrapped});
  * - Вставка контента в слот через {@link setSlot}:
- *   строка, DOM-узел или другой `CoreLayout` (дочерний);
+ *   строка, DOM-узел или другой `Layout` (дочерний);
  * - «Отложенные слоты»: если `setSlot` вызван до появления DOM/шаблонов,
  *   контент накапливается в очереди и применяется при {@link onRootCreated}/{@link onMounted};
  * - Интеграция с {@link ChildrenFeature}: дочерние layout’ы монтируются через
@@ -20,7 +20,7 @@ import {Feature} from "@/components/Feature";
  *
  * @typeParam TSlots Строковый литерал с допустимыми именами слотов.
  */
-export class SlotsFeature<TSlots extends string = never> implements Feature {
+export class SlotsFeature<TSlots extends string = never> implements FeatureContract<Layout> {
     /** Хостовый layout, к которому подключена фича. */
     private host!: Layout;
 
@@ -89,7 +89,7 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
      *   затем вставляется новый:
      *   - `string` → текстовый узел;
      *   - `Node` → как есть;
-     *   - `CoreLayout` → монтируется через {@link ChildrenFeature.attach} (если есть),
+     *   - `Layout` → монтируется через {@link ChildrenFeature.attach} (если есть),
      *     иначе через прямой `mountTo` (без каскадного destroy).
      *
      * @param name Имя слота.
@@ -148,7 +148,7 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
      */
     private ensureWrapped(name: string) {
         const tpl = this.slotMap.get(name);
-        if (!tpl) throw new Error(`Слот "${name}" не найден`);
+        if (!tpl) throw new Error(`Slot "${name}" not found`);
 
         let before = this.findMarker(name, "start");
         let after  = this.findMarker(name, "end");

@@ -54,7 +54,7 @@ export function reactive(...args: any[]): any {
   const initialValue = args[0];
   const context: any = args[1];
   if (!context || context.kind !== 'field') {
-    throw new Error('@reactive можно применять только к полям класса');
+    throw new Error('@reactive can only be applied to class fields');
   }
   context.addInitializer(function initReactive(this: any) {
     const name = context.name as string;

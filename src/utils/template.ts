@@ -51,7 +51,7 @@ export function renderTemplate(
   tmpl.innerHTML = compiled.trim();
   const element = tmpl.content.firstElementChild;
   if (!element) {
-    throw new Error('renderTemplate(): шаблон не содержит корневого элемента');
+    throw new Error('renderTemplate(): template does not contain a root element');
   }
   return element as HTMLElement;
 }

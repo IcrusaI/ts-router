@@ -1,6 +1,6 @@
 import type Layout from "@/components/Layout";
 
-import {Feature} from "@/components/Feature";
+import { Feature as FeatureContract } from "@/components/Feature";
 
 /**
  * Фича управления дочерними компонентами (каскадный жизненный цикл).
@@ -11,12 +11,12 @@ import {Feature} from "@/components/Feature";
  * - На этапе уничтожения родителя автоматически **разрушать всех детей** (`onDestroy`).
  *
  * Где используется:
- * - Как самостоятельная фича, добавляемая через `layout.with("children", new ChildrenFeature())`;
+ * - Как фича `layout.children`, подключённая через декоратор `@Feature()`;
  * - В связке с композициями, когда `renderStructure()` возвращает дочерний `LayoutLike`:
  *   родитель монтирует ребёнка во внутренний host, а `ChildrenFeature` гарантирует
  *   каскадный `destroy()` при уничтожении родителя.
  */
-export class ChildrenFeature implements Feature {
+export class ChildrenFeature implements FeatureContract<Layout> {
     /**
      * Текущее множество дочерних layout’ов, присоединённых через {@link attach}.
      * Держим слабые ссылки на уровне логики (не DOM), чтобы корректно выполнить
