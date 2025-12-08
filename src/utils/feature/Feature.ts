@@ -1,6 +1,6 @@
 import type Layout from "@/components/Layout";
 import {attachFeature} from "@/utils/feature/featureRegistry";
-import {Feature} from "@/components/Feature";
+import {IFeature} from "@/components/IFeature";
 
 /**
  * Декоратор поля фичи.
@@ -11,8 +11,8 @@ import {Feature} from "@/components/Feature";
  *   public children!: ChildrenFeature;
  * }
  */
-export function Feature() {
-    return <This extends Layout, V extends Feature<This>>(
+export default function Feature() {
+    return <This extends Layout, V extends IFeature<This>>(
         _value: undefined,
         context: ClassFieldDecoratorContext<This, V>,
     ) => {

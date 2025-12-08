@@ -1,11 +1,10 @@
-// src/core/featureRegistry.ts
 import type Layout from "@/components/Layout";
 
-import {Feature} from "@/components/Feature";
+import {IFeature} from "@/components/IFeature";
 
-const FEATURE_STORE = new WeakMap<Layout, Map<string, Feature<Layout>>>();
+const FEATURE_STORE = new WeakMap<Layout, Map<string, IFeature<Layout>>>();
 
-export function attachFeature<H extends Layout, F extends Feature<H>>(
+export function attachFeature<H extends Layout, F extends IFeature<H>>(
     host: H,
     key: string,
     feature: F,
@@ -19,11 +18,11 @@ export function attachFeature<H extends Layout, F extends Feature<H>>(
         throw new Error(`Feature "${key}" already installed`);
     }
 
-    bucket.set(key, feature as unknown as Feature<Layout>);
+    bucket.set(key, feature as unknown as IFeature<Layout>);
     feature.onInit?.(host);
 }
 
-export function forEachFeature(host: Layout, cb: (feature: Feature<Layout>) => void) {
+export function forEachFeature(host: Layout, cb: (feature: IFeature<Layout>) => void) {
     const bucket = FEATURE_STORE.get(host);
     if (!bucket) return;
     for (const f of bucket.values()) cb(f);

@@ -1,6 +1,6 @@
 import type Layout from "@/components/Layout";
 
-import { Feature as FeatureContract } from "@/components/Feature";
+import { IFeature  } from "@/components/IFeature";
 
 /**
  * Фича управления дочерними компонентами (каскадный жизненный цикл).
@@ -16,7 +16,7 @@ import { Feature as FeatureContract } from "@/components/Feature";
  *   родитель монтирует ребёнка во внутренний host, а `ChildrenFeature` гарантирует
  *   каскадный `destroy()` при уничтожении родителя.
  */
-export class ChildrenFeature implements FeatureContract<Layout> {
+export default class ChildrenFeature implements IFeature {
     /**
      * Текущее множество дочерних layout’ов, присоединённых через {@link attach}.
      * Держим слабые ссылки на уровне логики (не DOM), чтобы корректно выполнить

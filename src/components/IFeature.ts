@@ -17,7 +17,7 @@ import Layout, { Hook } from "@/components/Layout";
  *
  * @typeParam Host Конкретный тип хоста (обычно сам {@link Layout} или его наследник).
  */
-export interface Feature<Host extends Layout = Layout> {
+export interface IFeature<Host extends Layout = Layout> {
     /**
      * Инициализация фичи: хост уже создан, но корневой DOM ещё не построен.
      * Вызывается сразу при регистрации фичи во внутреннем реестре.
