@@ -1,6 +1,7 @@
-import {Feature, isLayoutLike} from "@/components/CoreLayout";
-import CoreLayout from "@/components/CoreLayout";
+import {isLayoutLike} from "@/components/Layout";
+import Layout from "@/components/Layout";
 import { ChildrenFeature } from "@/components/feature/ChildrenFeature";
+import {Feature} from "@/components/Feature";
 
 /**
  * Фича «слотов» на базе `<template slot="name">` с поддержкой
@@ -21,7 +22,7 @@ import { ChildrenFeature } from "@/components/feature/ChildrenFeature";
  */
 export class SlotsFeature<TSlots extends string = never> implements Feature {
     /** Хостовый layout, к которому подключена фича. */
-    private host!: CoreLayout;
+    private host!: Layout;
 
     /** Корневой DOM-элемент хоста (устанавливается в {@link onRootCreated}). */
     private root?: HTMLElement;
@@ -36,7 +37,7 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
      * Очередь «отложенных» вставок для слотов, когда шаблон ещё не найден.
      * Ключ — имя слота, значение — массив контента (строка/узел/дочерний layout).
      */
-    private readonly pending = new Map<string, Array<Node | string | CoreLayout>>();
+    private readonly pending = new Map<string, Array<Node | string | Layout>>();
 
     /** Флаг: идёт ли сейчас применение отложенных слотов (см. {@link flush}). */
     private flushing = false;
@@ -51,7 +52,7 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
      * Инициализация фичи: сохраняем хост и пробуем получить ссылку на
      * подключённую фичу детей (`layout.children`), если она есть.
      */
-    onInit(host: CoreLayout) {
+    onInit(host: Layout) {
         this.host = host;
         this.children = (host as any).children as ChildrenFeature | undefined;
     }
@@ -94,7 +95,7 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
      * @param name Имя слота.
      * @param content Текст, DOM-узел или дочерний layout.
      */
-    async setSlot(name: TSlots, content: Node | string | CoreLayout) {
+    async setSlot(name: TSlots, content: Node | string | Layout) {
         const key = String(name);
         if (!this.slotMap.has(key)) {
             const list = this.pending.get(key) ?? [];

@@ -36,7 +36,7 @@ import { effect, ReadWriteSignal, signal } from "@/utils/reactive";
  * (наследуется от {@link Layout} и позволяет типобезопасно вызывать
  * {@link Layout.setSlot}).
  */
-export default abstract class Page<TSlots extends string = never> extends Layout<TSlots> {
+export default abstract class Page extends Layout {
     /**
      * @deprecated
      * Метод оставлен для обратной совместимости.

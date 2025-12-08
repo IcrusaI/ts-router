@@ -1,5 +1,6 @@
-import type CoreLayout from "@/components/CoreLayout";
-import type { Feature } from "@/components/CoreLayout";
+import type Layout from "@/components/Layout";
+
+import {Feature} from "@/components/Feature";
 
 /**
  * Фича управления дочерними компонентами (каскадный жизненный цикл).
@@ -25,7 +26,7 @@ export class ChildrenFeature implements Feature {
      * все их DOM-подписки и освобождает ресурсы.
      * @private
      */
-    private readonly children = new Set<CoreLayout>();
+    private readonly children = new Set<Layout>();
 
     /**
      * Присоединить дочерний layout к произвольному host (элемент или фрагмент).
@@ -44,7 +45,7 @@ export class ChildrenFeature implements Feature {
      * await shell.children.attach(new SidebarLayout(), shell.getElement().querySelector("aside")!);
      * ```
      */
-    async attach(child: CoreLayout, host: Element | DocumentFragment): Promise<void> {
+    async attach(child: Layout, host: Element | DocumentFragment): Promise<void> {
         await child.mountTo(host);
         this.children.add(child);
     }
@@ -64,7 +65,7 @@ export class ChildrenFeature implements Feature {
      * await shell.children.detach(sidebar);
      * ```
      */
-    async detach(child: CoreLayout): Promise<void> {
+    async detach(child: Layout): Promise<void> {
         if (this.children.delete(child)) await child.destroy();
     }
 
@@ -75,7 +76,7 @@ export class ChildrenFeature implements Feature {
      *  - для каждого зарегистрированного ребёнка вызывается `destroy()`;
      *  - внутренний реестр очищается.
      *
-     * Вызывается автоматически из {@link CoreLayout.destroy}.
+     * Вызывается автоматически из {@link Layout.destroy}.
      */
     async onDestroy(): Promise<void> {
         for (const c of this.children) await c.destroy();
