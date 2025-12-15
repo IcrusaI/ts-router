@@ -1,7 +1,7 @@
-import {renderTemplate} from "@/utils/template";
-import {effect, signal} from "@/utils/reactive";
+import {signal} from "@/utils/reactive";
 import {forEachFeature} from "@/utils/feature/featureRegistry";
 import ChildrenFeature from "@/components/feature/ChildrenFeature";
+import TemplateFeature from "@/components/feature/TemplateFeature";
 import Feature from "@/utils/feature/Feature";
 
 /**
@@ -70,6 +70,9 @@ export function isLayoutLike(x: unknown): x is LayoutLike {
 export default abstract class Layout {
     @Feature(ChildrenFeature)
     protected children!: ChildrenFeature;
+
+    @Feature(TemplateFeature)
+    protected template!: TemplateFeature;
 
     /** Корневой DOM-элемент компонента (создаётся при первом обращении). */
     private root?: HTMLElement;
@@ -198,35 +201,7 @@ export default abstract class Layout {
      */
     protected html(tpl: string): HTMLElement {
         this.ensureReactiveProps();
-
-        const binds: { id: number; expr: string }[] = [];
-        let i = 0;
-
-        // заменяем КАЖДЫЙ {{ expr }} на отдельный span
-        const compiled = tpl.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_m, expr) => {
-            const id = i++;
-            binds.push({ id, expr: expr.trim() });
-            return `<span data-bind="${id}"></span>`;
-        });
-
-        const root = renderTemplate(compiled, {}); // контекст тут не нужен, берём this в effect
-
-        for (const { id, expr } of binds) {
-            const node = root.querySelector<HTMLElement>(`[data-bind="${id}"]`);
-            if (!node) continue;
-
-            effect(() => {
-                let value: any = this as any;
-                for (const part of expr.split('.')) {
-                    if (value == null) break;
-                    value = value[part];
-                }
-                if (typeof value === 'function') value = value.call(this);
-                node.textContent = value != null ? String(value) : '';
-            });
-        }
-
-        return root as HTMLElement;
+        return this.template.html(tpl);
     }
 
     // —— lifecycle ————————————————————————————————————————————————
