@@ -1,6 +1,8 @@
 import {renderTemplate} from "@/utils/template";
 import {effect, signal} from "@/utils/reactive";
 import {forEachFeature} from "@/utils/feature/featureRegistry";
+import ChildrenFeature from "@/components/feature/ChildrenFeature";
+import Feature from "@/utils/feature/Feature";
 
 /**
  * Internal symbol used to mark whether reactive properties have been
@@ -66,6 +68,9 @@ export function isLayoutLike(x: unknown): x is LayoutLike {
  *   **но для каскадного destroy должен быть подключён ChildrenFeature**.
  */
 export default abstract class Layout {
+    @Feature(ChildrenFeature)
+    protected children!: ChildrenFeature;
+
     /** Корневой DOM-элемент компонента (создаётся при первом обращении). */
     private root?: HTMLElement;
 

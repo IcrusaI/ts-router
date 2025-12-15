@@ -11,25 +11,19 @@ import {IFeature} from "@/components/IFeature";
  *   public children!: ChildrenFeature;
  * }
  */
-export default function Feature() {
+export default function Feature(
+    ctor: new (...args: any[]) => IFeature<any>,
+) {
     return <This extends Layout, V extends IFeature<This>>(
         _value: undefined,
         context: ClassFieldDecoratorContext<This, V>,
     ) => {
         return function (this: This, initial: V | undefined) {
-            if (!initial) {
-                throw new Error(
-                    `Field "${String(context.name)}" with @Feature() must have initializer`,
-                );
-            }
-
-            const instance = initial;
             const name = String(context.name);
 
-            // регистрируем фичу во внутреннем реестре
-            attachFeature(this, name, instance);
+            const instance = (initial ?? (new ctor() as V));
 
-            // просто возвращаем значение в поле — property создаёт сам JS
+            attachFeature(this, name, instance);
             return instance;
         };
     };

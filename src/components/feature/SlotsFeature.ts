@@ -1,6 +1,6 @@
 import {isLayoutLike} from "@/components/Layout";
 import Layout from "@/components/Layout";
-import { ChildrenFeature } from "@/components/feature/ChildrenFeature";
+import ChildrenFeature from "@/components/feature/ChildrenFeature";
 import { IFeature } from "@/components/IFeature";
 
 /**

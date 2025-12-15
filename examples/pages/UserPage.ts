@@ -7,7 +7,7 @@ function getUserIdFromPath(): string {
     return m?.[1] ?? "unknown";
 }
 
-export default class UserPage extends Page<"header" | "sidebar" | "content"> {
+export default class UserPage extends Page {
     public title!: string;
 
     protected created() {

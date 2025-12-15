@@ -1,7 +1,7 @@
 import { Page } from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
 
-export default class HomePage extends Page<"header" | "sidebar" | "content"> {
+export default class HomePage extends Page {
     /**
      * Заголовок страницы устанавливается в created(). Не присваивайте здесь.
      */
