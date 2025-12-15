@@ -8,30 +8,31 @@ export default class HomePage extends Page {
     public title!: string;
 
     protected renderStructure() {
-        const shell = new ShellLayout();
+        return this.html(`
+          <layout type="ShellLayout">
+            <template slot="header">
+              <h1>Главная</h1>
+              <p>Query: {{ queryString }}</p>
+            </template>
 
-        const header = document.createElement("div");
-        header.innerHTML = `<h1>Главная</h1><p>Query: ${window.location.search || "—"}</p>`;
+            <template slot="sidebar">
+              <ul>
+                <li><a href="/?anchor#section">Прокрутка к #section</a></li>
+                <li><a href="/users/1?tab=info">User 1 (tab=info)</a></li>
+              </ul>
+            </template>
 
-        const sidebar = document.createElement("div");
-        sidebar.innerHTML = `
-      <ul>
-        <li><a href="/?anchor#section">Прокрутка к #section</a></li>
-        <li><a href="/users/1?tab=info">User 1 (tab=info)</a></li>
-      </ul>
-    `;
+            <template slot="content">
+              <p>Это пример страницы с layout и слотами.</p>
+              <div id="section" class="anchor">#section — якорь</div>
+            </template>
+          </layout>
+        `, { ShellLayout });
+    }
 
-        const content = document.createElement("div");
-        content.innerHTML = `
-      <p>Это пример страницы с layout и слотами.</p>
-      <div id="section" class="anchor">#section — якорь</div>
-    `;
-
-        void shell.slots.setSlot("header", header);
-        void shell.slots.setSlot("sidebar", sidebar);
-        void shell.slots.setSlot("content", content);
-
-        return shell;
+    // значение для {{ queryString }}
+    get queryString(): string {
+        return window.location.search || "—";
     }
 
     private interval?: NodeJS.Timeout;

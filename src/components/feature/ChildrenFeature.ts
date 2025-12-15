@@ -29,6 +29,19 @@ export default class ChildrenFeature implements IFeature {
     private readonly children = new Set<Layout>();
 
     /**
+     * Зарегистрировать ребёнка для каскадного destroy без немедленного mount.
+     *
+     * Используется в синхронной фазе композиции (например, при обработке
+     * `<layout type="...">` внутри шаблона), когда требуется, чтобы
+     * `renderStructure()` уже вернул готовый DOM, но дочерний компонент
+     * будет считаться «принадлежащим» родителю и должен быть уничтожен
+     * вместе с ним.
+     */
+    register(child: Layout): void {
+        this.children.add(child);
+    }
+
+    /**
      * Присоединить дочерний layout к произвольному host (элемент или фрагмент).
      *
      * Что происходит:

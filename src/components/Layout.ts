@@ -1,7 +1,7 @@
-import {signal} from "@/utils/reactive";
+import { signal } from "@/utils/reactive";
 import {forEachFeature} from "@/utils/feature/featureRegistry";
 import ChildrenFeature from "@/components/feature/ChildrenFeature";
-import TemplateFeature from "@/components/feature/TemplateFeature";
+import TemplateFeature, { TemplateComponents } from "@/components/feature/TemplateFeature";
 import Feature from "@/utils/feature/Feature";
 
 /**
@@ -199,9 +199,9 @@ export default abstract class Layout {
      * @param ctx Объект, содержащий значения для подстановки
      * @returns DOM‑элемент, соответствующий корню шаблона
      */
-    protected html(tpl: string): HTMLElement {
+    protected html(tpl: string, components: TemplateComponents = {}): HTMLElement {
         this.ensureReactiveProps();
-        return this.template.html(tpl);
+        return this.template.html(tpl, components);
     }
 
     // —— lifecycle ————————————————————————————————————————————————
@@ -309,6 +309,8 @@ export default abstract class Layout {
      */
     private ensureRoot(): void {
         let node = this.renderStructure();
+
+        console.log(node, this);
 
         // ── 0) Строка-HTML: разрешаем ровно один корневой элемент
         if (typeof node === 'string') {
