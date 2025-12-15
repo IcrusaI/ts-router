@@ -1,59 +1,27 @@
-import Layout, { Hook } from "@/components/Layout";
+import Layout from "@/components/Layout";
 
-/**
- * Плагин (feature) для {@link Layout}.
- *
- * Фича может реагировать на ключевые моменты жизненного цикла layout’а
- * и расширять его поведение. Фичи регистрируются во внутреннем реестре
- * (см. {@link attachFeature}) и, как правило, становятся полями экземпляра
- * через декоратор {@link Feature @Feature()}:
- *
- * ```ts
- * class ShellLayout extends Layout<"header" | "sidebar"> {
- *   @Feature()
- *   public children = new ChildrenFeature();
- * }
- * ```
- *
- * @typeParam Host Конкретный тип хоста (обычно сам {@link Layout} или его наследник).
- */
+export type HookCleanup = void | (() => void | Promise<void>);
+export type MaybePromise<T> = T | Promise<T>;
+
 export interface IFeature<Host extends Layout = Layout> {
-    /**
-     * Инициализация фичи: хост уже создан, но корневой DOM ещё не построен.
-     * Вызывается сразу при регистрации фичи во внутреннем реестре.
-     *
-     * Здесь удобно:
-     *  - сохранять ссылку на хост;
-     *  - настраивать внутреннее состояние;
-     *  - подписываться на низкоуровневые события хоста.
-     */
-    onInit?(host: Host): void | Promise<void>;
+    onInit?(host: Host): MaybePromise<void>;
+    onFeaturesReady?(host: Host): MaybePromise<void>;
 
-    /**
-     * Хостовый корневой DOM создан (но ещё не вставлен в документ).
-     * Вызывается сразу после выполнения {@link Layout.renderStructure}.
-     *
-     * Здесь можно:
-     *  - находить нужные элементы внутри корня;
-     *  - навешивать обработчики;
-     *  - готовить внутреннее состояние, завязанное на структуру DOM.
-     */
-    onRootCreated?(root: HTMLElement): void | Promise<void>;
+    beforeRender?(): MaybePromise<void>;
 
-    /**
-     * Хостовый корень уже вставлен в DOM (после {@link Layout.mountTo}).
-     * Здесь можно выполнять измерения, подключать наблюдателей и пр.
-     *
-     * Если хук возвращает функцию, она будет вызвана при размонтировании
-     * (аналог «cleanup» в эффектах).
-     */
-    onMounted?(): Hook;
+    afterRender?(result: unknown): unknown;
 
-    /**
-     * Хост собирается уничтожаться ({@link Layout.destroy}).
-     * Здесь освобождаем ресурсы (таймеры, подписки, каскадный destroy и т.д.).
-     *
-     * Если хук возвращает функцию, она будет вызвана после удаления корня.
-     */
-    onDestroy?(): Hook;
+    onRootCreated?(root: HTMLElement): MaybePromise<void>;
+    beforeMountRoot?(root: HTMLElement): MaybePromise<void>;
+
+    onMounted?(): MaybePromise<HookCleanup>;
+    afterMounted?(): MaybePromise<HookCleanup>;
+
+    beforeUpdate?(partial?: Record<string, any>): MaybePromise<void>;
+    afterUpdate?(partial?: Record<string, any>): MaybePromise<void>;
+    onStateChanged?(partial: Record<string, any>): MaybePromise<void>;
+
+    beforeDestroy?(): MaybePromise<void>;
+    onDestroy?(): MaybePromise<HookCleanup>;
+    afterDestroy?(): MaybePromise<HookCleanup>;
 }

@@ -1,7 +1,5 @@
-import {renderTemplate} from "@/utils/template";
-import {effect, signal} from "@/utils/reactive";
+import { signal} from "@/utils/reactive";
 import {forEachFeature} from "@/utils/feature/featureRegistry";
-import ChildrenFeature from "@/components/feature/ChildrenFeature";
 import Feature from "@/utils/feature/Feature";
 import {TemplateFeature} from "@/index";
 
@@ -30,33 +28,6 @@ interface ReactiveConstructor extends Function {
 export type Hook = void | Promise<void>;
 
 /**
- * Минимальный «layout-подобный» контракт для композиции.
- * Используется, когда {@link Layout.renderStructure} возвращает не `HTMLElement`,
- * а дочерний layout, который надо смонтировать внутрь родителя.
- */
-export interface LayoutLike {
-    /**
-     * Смонтировать компонент в указанный контейнер.
-     */
-    mountTo(container: Element | DocumentFragment): Promise<void>;
-
-    /**
-     * Опциональный метод освобождения ресурсов.
-     */
-    destroy?(): Promise<void>;
-}
-
-/**
- * Type guard: является ли объект layout-подобным.
- *
- * @param x Любое значение.
- * @returns `true`, если у объекта есть функция `mountTo(...)`.
- */
-export function isLayoutLike(x: unknown): x is LayoutLike {
-    return !!x && typeof (x as any).mountTo === "function";
-}
-
-/**
  * Базовый минимальный layout-ядро без фреймворка.
  *
  * Возможности:
@@ -65,13 +36,10 @@ export function isLayoutLike(x: unknown): x is LayoutLike {
  * - Система плагинов/фич ({@link with}), которые доступны как поля экземпляра;
  * - Управление состоянием (`setState`) и безопасные DOM-подписки (`addEvent`);
  * - Композиция: {@link renderStructure} может вернуть другой layout
- *   ({@link LayoutLike}); его монтирование произойдёт автоматически,
+ *   ({@link Layout}); его монтирование произойдёт автоматически,
  *   **но для каскадного destroy должен быть подключён ChildrenFeature**.
  */
 export default abstract class Layout {
-    @Feature(ChildrenFeature)
-    protected children!: ChildrenFeature;
-
     @Feature(TemplateFeature)
     protected template!: TemplateFeature;
 
@@ -87,11 +55,8 @@ export default abstract class Layout {
      */
     private readonly listeners: Array<() => void> = [];
 
-    /**
-     * Дочерний layout, возвращённый из {@link renderStructure}, и host-контейнер
-     * для его монтирования. Применяется один раз при первом {@link mountTo}.
-     */
-    private _composedChild?: { child: LayoutLike; host: HTMLElement };
+    private readonly cleanups: Array<() => Promise<void>> = [];
+
 
     /**
      * Конструктор: синхронно вызывает опциональный хук {@link created}.
@@ -99,7 +64,10 @@ export default abstract class Layout {
      */
     constructor() {
         this.created?.();
-    }
+
+        queueMicrotask(() => {
+            void forEachFeature(this, (f: any) => f.onFeaturesReady?.(this));
+        });    }
 
     /**
      * Once per-instance routine to upgrade declared fields into reactive
@@ -175,7 +143,14 @@ export default abstract class Layout {
     }
 
     // —— lifecycle ————————————————————————————————————————————————
-
+    private registerCleanup(cleanup: any) {
+        if (!cleanup) return;
+        if (typeof cleanup === "function") {
+            this.cleanups.push(async () => {
+                await cleanup();
+            });
+        }
+    }
     /**
      * Смонтировать компонент в указанный контейнер.
      *
@@ -183,7 +158,7 @@ export default abstract class Layout {
      * 1) Лениво создаётся корневой DOM (`ensureRoot` → `renderStructure`);
      * 2) Если вызывается впервые — `beforeMount?()`;
      * 3) Корень вставляется в контейнер;
-     * 4) Если {@link renderStructure} вернул дочерний `LayoutLike`,
+     * 4) Если {@link renderStructure} вернул дочерний `Layout`,
      *    он будет смонтирован **сейчас** в специальный host внутри корня.
      *    Для каскадного уничтожения ребёнка требуется подключённый ChildrenFeature
      *    (ожидается поле `this.children.attach`), иначе выбрасывается ошибка;
@@ -199,33 +174,27 @@ export default abstract class Layout {
         if (!this.root) this.ensureRoot();
 
         const firstTime = !this._mounted;
-        if (firstTime) await this.beforeMount?.();
+        if (firstTime) {
+            await forEachFeature(this, (f: any) => f.beforeMountRoot?.(this.root!));
+            await this.beforeMount?.();
+        }
 
         container.append(this.root!);
         this._mounted = true;
 
-        // Если renderStructure() вернул layout — прикрепим его СЕЙЧАС
-        if (firstTime && this._composedChild) {
-            const child = this._composedChild.child;
-            const host = this._composedChild.host;
+        // onMounted
+        forEachFeature(this, (f: any) => {
+            const c = f.onMounted?.();
+            this.registerCleanup(c);
+        });
 
-            // todo: перенести привязку в сам ChildrenFeature (инъекция)
-            const childrenFx = (this as any)["children"] as {
-                attach?: (c: LayoutLike, h: Element | DocumentFragment) => Promise<void>;
-            } | undefined;
-
-            if (!childrenFx?.attach) {
-                throw new Error(
-                    "renderStructure() returned a Layout instance, but ChildrenFeature is not attached. " +
-                    "Attach ChildrenFeature (this.children) before returning a child layout."
-                );
-            }
-            await childrenFx.attach(child, host);
-            this._composedChild = undefined;
-        }
-
-        await forEachFeature(this, f => f.onMounted?.());
         await this.afterMount?.();
+
+        // afterMounted (точно после afterMount)
+        forEachFeature(this, (f: any) => {
+            const c = f.afterMounted?.();
+            this.registerCleanup(c);
+        });
     }
 
     /**
@@ -239,16 +208,40 @@ export default abstract class Layout {
      * Повторные вызовы безопасны (no-op, если компонент не смонтирован).
      */
     public async destroy(): Promise<void> {
+        forEachFeature(this, (f: any) => f.beforeDestroy?.());
+
         if (this._mounted && this.root) {
             await this.beforeUnmount?.();
-            await forEachFeature(this, f => f.onDestroy?.());
+
+            forEachFeature(this, (f: any) => {
+                const c = f.onDestroy?.();
+                this.registerCleanup(c);
+            });
+
+            // снимаем зарегистрированные cleanup-и (в т.ч. от onMounted/afterMounted/effect)
+            for (const c of this.cleanups.splice(0)) await c();
+
             this.root.remove();
             this._mounted = false;
+
+            forEachFeature(this, (f: any) => {
+                const c = f.afterDestroy?.();
+                this.registerCleanup(c);
+            });
+
+            // cleanup-и afterDestroy
+            for (const c of this.cleanups.splice(0)) await c();
+
             await this.unmounted?.();
+        } else {
+            // если не смонтирован — всё равно снять cleanup-и (effects и т.п.)
+            for (const c of this.cleanups.splice(0)) await c();
         }
-        this.listeners.forEach(off => off());
+
+        this.listeners.forEach((off) => off());
         this.listeners.length = 0;
     }
+
 
     /**
      * Доступ к корневому DOM-элементу (лениво создаётся при первом обращении).
@@ -269,7 +262,7 @@ export default abstract class Layout {
     /**
      * Внутренняя инициализация корневого DOM.
      *
-     * - Если {@link renderStructure} вернул `LayoutLike`, создаётся host-контейнер
+     * - Если {@link renderStructure} вернул `Layout`, создаётся host-контейнер
      *   (div[data-layout-host]) для родителя, а сам ребёнок откладывается
      *   до первого `mountTo()` (там произойдёт корректный attach в DOM).
      * - Если возвращён `HTMLElement`, он становится корнем.
@@ -278,40 +271,43 @@ export default abstract class Layout {
      * @throws Если {@link renderStructure} вернул неподдерживаемый тип.
      */
     private ensureRoot(): void {
-        let node = this.renderStructure();
+        forEachFeature(this, (f: any) => f.beforeRender?.());
 
-        // ── 0) Строка-HTML: разрешаем ровно один корневой элемент
-        if (typeof node === 'string') {
-            const tpl = document.createElement('template');
+        let node: any = this.renderStructure();
+
+        // Поскольку ensureRoot синхронный в текущей архитектуре,
+        // здесь deliberately оставляем afterRender синхронным по умолчанию.
+        // Если хочешь поддержать async afterRender — нужно сделать ensureRoot async.
+        // Поэтому здесь исполняем только sync-часть:
+        forEachFeature(this, (f: any) => {
+            if (!f.afterRender) return;
+            const out = f.afterRender(node);
+            // если фича вернула Promise — это ошибка конфигурации (см. комментарий выше)
+            if (out && typeof (out as any).then === "function") {
+                throw new Error("IFeature.afterRender() must be synchronous in current Layout.ensureRoot()");
+            }
+            node = out;
+        });
+
+        // ── 0) string html
+        if (typeof node === "string") {
+            const tpl = document.createElement("template");
             tpl.innerHTML = node.trim();
-
             const { firstElementChild, childElementCount } = tpl.content;
             if (childElementCount !== 1 || !firstElementChild) {
                 throw new Error(
-                    'renderStructure(): HTML string must contain exactly one root element. ' +
-                    'Example: <section>...</section>',
+                    "renderStructure(): HTML string must contain exactly one root element. Example: <section>...</section>"
                 );
             }
-
             node = firstElementChild as HTMLElement;
         }
 
-        // 1) Возвращён дочерний layout: создаём host и откладываем attach до mountTo()
-        if (isLayoutLike(node)) {
-            const host = document.createElement("div");
-            host.dataset.layoutHost = "";
-            this.root = host;
-            this._composedChild = { child: node, host };
-            forEachFeature(this, f => f.onRootCreated?.(host));
-            return;
-        }
-
-        // 2) Обычный HTMLElement
+        // 2) HTMLElement
         if (!(node instanceof HTMLElement)) {
-            throw new Error("renderStructure() must return HTMLElement or Layout");
+            throw new Error("renderStructure() must return HTMLElement");
         }
         this.root = node;
-        forEachFeature(this, f => f.onRootCreated?.(node));
+        forEachFeature(this, (f: any) => f.onRootCreated?.(node));
     }
 
     // —— state/events ————————————————————————————————————————————————
@@ -325,8 +321,13 @@ export default abstract class Layout {
     protected readonly state: Record<string, any> = {};
 
     public setState(partial: Record<string, any>): void {
+        void forEachFeature(this, (f: any) => f.beforeUpdate?.(partial));
+        void forEachFeature(this, (f: any) => f.onStateChanged?.(partial));
+
         Object.assign(this.state, partial);
         this.update?.();
+
+        void forEachFeature(this, (f: any) => f.afterUpdate?.(partial));
     }
 
     /**
@@ -362,13 +363,13 @@ export default abstract class Layout {
      *
      * - **`HTMLElement`** — станет корневым DOM-элементом данного layout’а;
      * - **`string`** — HTML-строка, которая **должна содержать ровно один корневой элемент**;
-     * - **`LayoutLike`** — дочерний layout, который будет автоматически
+     * - **`Layout`** — дочерний layout, который будет автоматически
      *   смонтирован внутрь специального host-контейнера при первом вызове {@link mountTo}.
      *   Для каскадного уничтожения ребёнка рекомендуется подключить `ChildrenFeature`.
      *
-     * @returns `HTMLElement` | `string` | `LayoutLike`
+     * @returns `HTMLElement` | `string`
      */
-    protected abstract renderStructure(): HTMLElement | LayoutLike | string;
+    protected abstract renderStructure(): HTMLElement | string | unknown;
 
     /** Хук: экземпляр создан, DOM ещё не построен. */
     protected created?(): void;

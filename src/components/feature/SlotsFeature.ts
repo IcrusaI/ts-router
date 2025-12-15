@@ -1,4 +1,4 @@
-import {isLayoutLike} from "@/components/Layout";
+import {isLayout} from "@/components/Layout";
 import Layout from "@/components/Layout";
 import ChildrenFeature from "@/components/feature/ChildrenFeature";
 import { IFeature } from "@/components/IFeature";
@@ -117,7 +117,7 @@ export default class SlotsFeature<TSlots extends string = never> implements IFea
         // вставка нового содержимого
         if (typeof content === "string") {
             after.before(document.createTextNode(content));
-        } else if (isLayoutLike(content)) {
+        } else if (isLayout(content)) {
             if (this.children) {
                 const frag = document.createDocumentFragment();
                 await this.children.attach(content, frag);
