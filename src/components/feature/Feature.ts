@@ -1,5 +1,5 @@
 import type Layout from "@/components/Layout";
-import {attachFeature} from "@/utils/feature/featureRegistry";
+import {attachFeature} from "@/components/feature/featureRegistry";
 import {IFeature} from "@/components/IFeature";
 
 /**

@@ -25,3 +25,15 @@ export interface IFeature<Host extends Layout = Layout> {
     onDestroy?(): MaybePromise<HookCleanup>;
     afterDestroy?(): MaybePromise<HookCleanup>;
 }
+
+/**
+ * Конструктор фичи, который также несёт дефолтное имя поля.
+ * Пример:
+ *   class ChildrenFeature { static featureKey = "children" }
+ */
+export type FeatureCtor<
+    Host extends Layout = Layout,
+    Instance extends IFeature<Host> = IFeature<Host>
+> = (new (...args: any[]) => Instance) & {
+    featureKey: string;
+};

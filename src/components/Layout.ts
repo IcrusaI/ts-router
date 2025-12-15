@@ -1,6 +1,6 @@
 import { signal} from "@/utils/reactive";
-import {forEachFeature} from "@/utils/feature/featureRegistry";
-import Feature from "@/utils/feature/Feature";
+import {forEachFeature} from "@/components/feature/featureRegistry";
+import Feature from "@/components/feature/Feature";
 import {TemplateFeature} from "@/index";
 
 /**

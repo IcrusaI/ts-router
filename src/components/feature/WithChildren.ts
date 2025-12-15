@@ -1,5 +1,5 @@
 import Layout from "@/components/Layout";
-import Feature from "@/utils/feature/Feature";
+import Feature from "@/components/feature/Feature";
 import ChildrenFeature from "@/components/feature/ChildrenFeature";
 
 type Ctor<T = {}> = new (...args: any[]) => T;
