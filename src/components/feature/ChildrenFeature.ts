@@ -1,4 +1,4 @@
-import type Layout from "@/components/Layout";
+import Layout, {Hook, LayoutLike} from "@/components/Layout";
 
 import { IFeature  } from "@/components/IFeature";
 
@@ -27,19 +27,6 @@ export default class ChildrenFeature implements IFeature {
      * @private
      */
     private readonly children = new Set<Layout>();
-
-    /**
-     * Зарегистрировать ребёнка для каскадного destroy без немедленного mount.
-     *
-     * Используется в синхронной фазе композиции (например, при обработке
-     * `<layout type="...">` внутри шаблона), когда требуется, чтобы
-     * `renderStructure()` уже вернул готовый DOM, но дочерний компонент
-     * будет считаться «принадлежащим» родителю и должен быть уничтожен
-     * вместе с ним.
-     */
-    register(child: Layout): void {
-        this.children.add(child);
-    }
 
     /**
      * Присоединить дочерний layout к произвольному host (элемент или фрагмент).
@@ -80,6 +67,42 @@ export default class ChildrenFeature implements IFeature {
      */
     async detach(child: Layout): Promise<void> {
         if (this.children.delete(child)) await child.destroy();
+    }
+
+    /**
+     * Зарегистрировать дочерний layout без монтирования.
+     *
+     * В отличие от {@link attach}, этот метод лишь добавляет ребёнка
+     * во внутренний реестр для корректного каскадного destroy, но не вызывает
+     * `child.mountTo`. Используется, когда рендеринг дочернего layout
+     * происходит синхронно в процессе шаблонизации (например, через
+     * TemplateFeature), и mount будет вызван позже вместе с родителем.
+     *
+     * @param child Дочерний layout для регистрации.
+     */
+    register(child: Layout): void {
+        this.children.add(child);
+    }
+
+    async onMounted() {
+        if (firstTime && this._composedChild) {
+            const child = this._composedChild.child;
+            const host = this._composedChild.host;
+
+            // todo: перенести привязку в сам ChildrenFeature (инъекция)
+            const childrenFx = (this as any)["children"] as {
+                attach?: (c: LayoutLike, h: Element | DocumentFragment) => Promise<void>;
+            } | undefined;
+
+            if (!childrenFx?.attach) {
+                throw new Error(
+                    "renderStructure() returned a Layout instance, but ChildrenFeature is not attached. " +
+                    "Attach ChildrenFeature (this.children) before returning a child layout."
+                );
+            }
+            await childrenFx.attach(child, host);
+            this._composedChild = undefined;
+        }
     }
 
     /**

@@ -1,8 +1,9 @@
-import { signal } from "@/utils/reactive";
+import {renderTemplate} from "@/utils/template";
+import {effect, signal} from "@/utils/reactive";
 import {forEachFeature} from "@/utils/feature/featureRegistry";
 import ChildrenFeature from "@/components/feature/ChildrenFeature";
-import TemplateFeature, { TemplateComponents } from "@/components/feature/TemplateFeature";
 import Feature from "@/utils/feature/Feature";
+import {TemplateFeature} from "@/index";
 
 /**
  * Internal symbol used to mark whether reactive properties have been
@@ -173,37 +174,6 @@ export default abstract class Layout {
         }
     }
 
-    // —— плагины ————————————————————————————————————————————————
-
-    /**
-     * Утилита для рендеринга HTML‑шаблонов со вставками вида `{{ path.to.value }}`.
-     * Вы можете писать разметку прямо в шаблонной строке, а затем передать
-     * объект контекста, в котором будут искаться значения для подстановки.
-     *
-     * Например:
-     * ```ts
-     * protected renderStructure(): HTMLElement {
-     *   return this.html(`
-     *     <div data-class="{{style.actions}}">
-     *       <button data-class="{{style.auth}}">{{ml.signIn}}</button>
-     *       <button data-class="{{style.auth}}">{{ml.signUp}}</button>
-     *     </div>
-     *   `, { ml, style });
-     * }
-     * ```
-     *
-     * Для разбора шаблона используется {@link renderTemplate}. Метод не
-     * изменяет DOM самостоятельно;
-     *
-     * @param tpl HTML‑шаблон со вставками в фигурных скобках
-     * @param ctx Объект, содержащий значения для подстановки
-     * @returns DOM‑элемент, соответствующий корню шаблона
-     */
-    protected html(tpl: string, components: TemplateComponents = {}): HTMLElement {
-        this.ensureReactiveProps();
-        return this.template.html(tpl, components);
-    }
-
     // —— lifecycle ————————————————————————————————————————————————
 
     /**
@@ -309,8 +279,6 @@ export default abstract class Layout {
      */
     private ensureRoot(): void {
         let node = this.renderStructure();
-
-        console.log(node, this);
 
         // ── 0) Строка-HTML: разрешаем ровно один корневой элемент
         if (typeof node === 'string') {
