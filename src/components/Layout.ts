@@ -39,10 +39,7 @@ export type Hook = void | Promise<void>;
  *   ({@link Layout}); его монтирование произойдёт автоматически,
  *   **но для каскадного destroy должен быть подключён ChildrenFeature**.
  */
-@UseFeatures(TemplateFeature)
 export default abstract class Layout {
-    protected template!: TemplateFeature;
-
     /** Корневой DOM-элемент компонента (создаётся при первом обращении). */
     private root?: HTMLElement;
 
@@ -63,8 +60,7 @@ export default abstract class Layout {
      * Плагины можно добавлять как до, так и после создания экземпляра, но до mount.
      */
     constructor() {
-        this.created?.();
-
+        // this.created?.();
     }
 
     /**

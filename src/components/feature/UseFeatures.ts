@@ -1,6 +1,6 @@
 import type Layout from "@/components/Layout";
 import type { FeatureCtor } from "@/components/IFeature";
-import {attachFeature, notifyFeaturesReady} from "@/components/feature/featureRegistry";
+import {attachFeature, notifyFeaturesReady} from "./featureRegistry";
 
 // Спецификация одного элемента списка
 export type FeatureSpec =
@@ -68,9 +68,8 @@ export function UseFeatures<const Specs extends readonly FeatureSpec[]>(
              */
             protected abstract override renderStructure(): RenderResult<Specs>;
 
-            constructor(...args: any[]) {
+            protected constructor(...args: any[]) {
                 super(...args);
-
                 // Инициализация фич: делаем ПОСЛЕ super(), когда host уже создан.
                 for (const s of specs) {
                     const { name, ctor } = normalizeSpec(s);
