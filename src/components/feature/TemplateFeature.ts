@@ -13,13 +13,15 @@ import type SlotsFeature from "@/components/feature/SlotsFeature";
  * - Передача слотов дочернему layout: `<template slot="name">...</template>`;
  * - Рендеринг содержимого слотов через шаблонизатор родителя.
  *
- * Для подключения достаточно пометить поле:
+ * Для подключения используй декоратор {@link UseFeatures}:
  * ```ts
- * @Feature(TemplateFeature)
- * protected template!: TemplateFeature;
+ * @UseFeatures(TemplateFeature)
+ * class MyLayout extends Layout {}
  * ```
  */
 export default class TemplateFeature implements IFeature {
+    static readonly featureName = "template";
+
     /** Хостовый layout, для которого подключена фича. */
     private host!: Layout;
     /** Список disposer-функций эффектов, чтобы очистить при destroy. */

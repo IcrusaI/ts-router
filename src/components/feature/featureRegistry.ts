@@ -27,3 +27,7 @@ export function forEachFeature(host: Layout, cb: (feature: IFeature<Layout>) => 
     if (!bucket) return;
     for (const f of bucket.values()) cb(f);
 }
+
+export function notifyFeaturesReady(host: Layout) {
+    forEachFeature(host, (feature) => void feature.onFeaturesReady?.(host));
+}

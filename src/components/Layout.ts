@@ -1,7 +1,7 @@
-import { signal} from "@/utils/reactive";
-import {forEachFeature} from "@/components/feature/featureRegistry";
-import Feature from "@/components/feature/Feature";
-import {TemplateFeature} from "@/index";
+import { signal } from "@/utils/reactive";
+import { forEachFeature } from "@/components/feature/featureRegistry";
+import TemplateFeature from "@/components/feature/TemplateFeature";
+import { UseFeatures } from "@/components/feature/UseFeatures";
 
 /**
  * Internal symbol used to mark whether reactive properties have been
@@ -39,8 +39,8 @@ export type Hook = void | Promise<void>;
  *   ({@link Layout}); его монтирование произойдёт автоматически,
  *   **но для каскадного destroy должен быть подключён ChildrenFeature**.
  */
+@UseFeatures(TemplateFeature)
 export default abstract class Layout {
-    @Feature(TemplateFeature)
     protected template!: TemplateFeature;
 
     /** Корневой DOM-элемент компонента (создаётся при первом обращении). */
@@ -65,9 +65,7 @@ export default abstract class Layout {
     constructor() {
         this.created?.();
 
-        queueMicrotask(() => {
-            void forEachFeature(this, (f: any) => f.onFeaturesReady?.(this));
-        });    }
+    }
 
     /**
      * Once per-instance routine to upgrade declared fields into reactive
@@ -93,6 +91,7 @@ export default abstract class Layout {
             'state',
             'children',
             'slots',
+            'template',
             'title',
         ]);
 
@@ -383,4 +382,8 @@ export default abstract class Layout {
     protected unmounted?(): Hook;
     /** Пользовательский «ручной» апдейт, вызывается из {@link setState}. */
     protected update?(): void;
+}
+
+export function isLayout(value: unknown): value is Layout {
+    return value instanceof Layout;
 }

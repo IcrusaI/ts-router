@@ -15,6 +15,8 @@ import { IFeature } from "@/components/IFeature";
  * - onMounted(): монтируем все pending children в соответствующие host.
  */
 export default class ChildrenFeature implements IFeature<Layout> {
+    static readonly featureName = "children";
+
     private host?: Layout;
 
     /**
