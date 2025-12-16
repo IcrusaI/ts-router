@@ -1,16 +1,16 @@
 import Layout from "@/components/Layout";
-import type { FeatureCtor, IFeature } from "@/components/IFeature";
-import {attachFeature} from "@/components/feature/featureRegistry";
+import type { FeatureCtor } from "@/components/IFeature";
+import {attachFeature, notifyFeaturesReady} from "@/components/feature/featureRegistry";
 
 // Спецификация одного элемента списка
 export type FeatureSpec =
     | FeatureCtor<any, any>
-    | { name: string; feature: FeatureCtor<any, any> };
+    | { name?: string; feature: FeatureCtor<any, any> };
 
 // Унифицируем spec -> ctor + name
 type SpecName<S> =
-    S extends { name: infer N extends string } ? N :
-        S extends FeatureCtor ? S["featureKey"] :
+    S extends { name?: infer N extends string } ? N :
+        S extends FeatureCtor ? S["featureName"] :
             never;
 
 type SpecCtor<S> =
@@ -20,14 +20,19 @@ type SpecCtor<S> =
 
 type SpecInstance<S> = InstanceType<SpecCtor<S>>;
 
+type SpecsByName<Specs extends readonly FeatureSpec[], Name extends string> =
+    Extract<Specs[number], { name: Name }> extends never
+        ? Extract<Specs[number], FeatureCtor & { featureName: Name }>
+        : Extract<Specs[number], { name: Name }>;
+
 // Поля, которые появятся на Layout после декоратора
 type FeatureFields<Specs extends readonly FeatureSpec[]> = {
-    [K in SpecName<Specs[number]>]: SpecInstance<Extract<Specs[number], any>>;
+    [K in SpecName<Specs[number]>]: SpecInstance<SpecsByName<Specs, K>>;
 };
 
 // Расширение контракта renderStructure: если среди Specs есть ChildrenFeature — разрешаем Layout
 type HasChildren<Specs extends readonly FeatureSpec[]> =
-    Extract<SpecCtor<Specs[number]>, { featureKey: "children" }> extends never ? false : true;
+    Extract<SpecCtor<Specs[number]>, { featureName: "children" }> extends never ? false : true;
 
 export type RenderResultBase = HTMLElement | string;
 export type RenderResultWithChildren = RenderResultBase | Layout;
@@ -36,11 +41,11 @@ export type RenderResult<Specs extends readonly FeatureSpec[]> =
     HasChildren<Specs> extends true ? RenderResultWithChildren : RenderResultBase;
 
 // Ctor helper
-type Ctor<T = {}> = new (...args: any[]) => T;
+type Ctor<T = {}> = abstract new (...args: any[]) => T;
 
 function normalizeSpec(spec: FeatureSpec): { name: string; ctor: FeatureCtor<any, any> } {
-    if (typeof spec === "function") return { name: spec.featureKey, ctor: spec };
-    return { name: spec.name, ctor: spec.feature };
+    if (typeof spec === "function") return { name: spec.featureName, ctor: spec };
+    return { name: spec.name ?? spec.feature.featureName, ctor: spec.feature };
 }
 
 /**
@@ -56,13 +61,10 @@ export function UseFeatures<const Specs extends readonly FeatureSpec[]>(
 ) {
     return function <TBase extends Ctor<Layout>>(Base: TBase) {
         abstract class WithFeatures extends Base {
-            // Типы: поля появятся автоматически
-            declare [K in keyof FeatureFields<Specs>]: FeatureFields<Specs>[K];
-
             /**
              * Документация для пользователя будет видна в IDE именно тут.
              *
-             * Если подключён children (featureKey === "children"), то допускается возврат Layout.
+             * Если подключён children (featureName === "children"), то допускается возврат Layout.
              */
             protected abstract override renderStructure(): RenderResult<Specs>;
 
@@ -72,6 +74,9 @@ export function UseFeatures<const Specs extends readonly FeatureSpec[]>(
                 // Инициализация фич: делаем ПОСЛЕ super(), когда host уже создан.
                 for (const s of specs) {
                     const { name, ctor } = normalizeSpec(s);
+                    if (!name) {
+                        throw new Error("Feature is missing featureName; provide name in @UseFeatures spec");
+                    }
 
                     // Создаём экземпляр фичи
                     const instance = new ctor();
@@ -82,9 +87,11 @@ export function UseFeatures<const Specs extends readonly FeatureSpec[]>(
                     // Регистрируем в твоём реестре (внутри должен вызваться onInit)
                     attachFeature(this, name, instance);
                 }
+
+                queueMicrotask(() => notifyFeaturesReady(this));
             }
         }
 
-        return WithFeatures as unknown as TBase;
+        return WithFeatures as unknown as (new (...args: any[]) => InstanceType<TBase> & FeatureFields<Specs>) & typeof Base;
     };
 }

@@ -21,6 +21,8 @@ import { IFeature } from "@/components/IFeature";
  * @typeParam TSlots Строковый литерал с допустимыми именами слотов.
  */
 export default class SlotsFeature<TSlots extends string = never> implements IFeature {
+    static readonly featureName = "slots";
+
     /** Хостовый layout, к которому подключена фича. */
     private host!: Layout;
 

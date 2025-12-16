@@ -29,11 +29,11 @@ export interface IFeature<Host extends Layout = Layout> {
 /**
  * Конструктор фичи, который также несёт дефолтное имя поля.
  * Пример:
- *   class ChildrenFeature { static featureKey = "children" }
+ *   class ChildrenFeature { static featureName = "children" }
  */
 export type FeatureCtor<
     Host extends Layout = Layout,
     Instance extends IFeature<Host> = IFeature<Host>
 > = (new (...args: any[]) => Instance) & {
-    featureKey: string;
+    featureName: string;
 };

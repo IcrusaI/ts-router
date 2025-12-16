@@ -7,6 +7,7 @@ export { signal, type ReadWriteSignal } from "@/utils/reactive";
 export { reactive } from "@/utils/decorators";
 
 export { default as Feature } from "@/components/feature/Feature";
+export { UseFeatures } from "@/components/feature/UseFeatures";
 export { default as ChildrenFeature } from "@/components/feature/ChildrenFeature";
 export { default as SlotsFeature } from "@/components/feature/SlotsFeature";
 

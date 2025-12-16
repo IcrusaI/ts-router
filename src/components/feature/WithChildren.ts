@@ -1,16 +1,9 @@
 import Layout from "@/components/Layout";
-import Feature from "@/components/feature/Feature";
 import ChildrenFeature from "@/components/feature/ChildrenFeature";
+import {UseFeatures} from "@/components/feature/UseFeatures";
 
-type Ctor<T = {}> = new (...args: any[]) => T;
+type Ctor<T = {}> = abstract new (...args: any[]) => T;
 
 export function WithChildren<TBase extends Ctor<Layout>>(Base: TBase) {
-  abstract class WithChildrenLayout extends Base {
-    @Feature(ChildrenFeature)
-    protected children!: ChildrenFeature;
-
-    protected abstract renderStructure(): HTMLElement | string | Layout;
-  }
-
-  return WithChildrenLayout;
+  return UseFeatures(ChildrenFeature)(Base);
 }
