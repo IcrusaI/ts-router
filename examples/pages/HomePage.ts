@@ -7,7 +7,7 @@ export default class HomePage extends Page {
     /**
      * Заголовок страницы устанавливается в created(). Не присваивайте здесь.
      */
-    // public title!: string;
+    public title!: string;
 
 /*
     protected renderStructure() {

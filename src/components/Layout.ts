@@ -1,7 +1,8 @@
 import { signal } from "@/utils/reactive";
-import { forEachFeature } from "@/components/feature/featureRegistry";
+import {attachFeature, forEachFeature, notifyFeaturesReady} from "@/components/feature/featureRegistry";
 import TemplateFeature from "@/components/feature/TemplateFeature";
-import { UseFeatures } from "@/components/feature/UseFeatures";
+import {FeatureSpec, USE_FEATURES_KEY, UseFeatures} from "@/components/feature/UseFeatures";
+import {FeatureCtor} from "@/components/IFeature";
 
 /**
  * Internal symbol used to mark whether reactive properties have been
@@ -26,6 +27,23 @@ interface ReactiveConstructor extends Function {
  * Хук может быть синхронным (void) или асинхронным (Promise<void>).
  */
 export type Hook = void | Promise<void>;
+
+function normalizeSpec(spec: FeatureSpec): { name: string; ctor: FeatureCtor<any, any> } {
+    if (typeof spec === "function") return { name: spec.featureName, ctor: spec };
+    return { name: spec.name ?? spec.feature.featureName, ctor: spec.feature };
+}
+
+function collectFeatureSpecs(ctor: Function): FeatureSpec[] {
+    // поддержка наследования: собираем спеки по цепочке прототипов конструкторов
+    const out: FeatureSpec[] = [];
+    let cur: any = ctor;
+    while (cur && cur !== Function.prototype) {
+        const s: FeatureSpec[] | undefined = cur[USE_FEATURES_KEY];
+        if (s) out.push(...s);
+        cur = Object.getPrototypeOf(cur);
+    }
+    return out;
+}
 
 /**
  * Базовый минимальный layout-ядро без фреймворка.
@@ -60,7 +78,21 @@ export default abstract class Layout {
      * Плагины можно добавлять как до, так и после создания экземпляра, но до mount.
      */
     constructor() {
-        // this.created?.();
+        const ctor = this.constructor as any;
+        const specs = collectFeatureSpecs(ctor);
+
+        for (const s of specs) {
+            const { name, ctor: Fx } = normalizeSpec(s);
+            if (!name) throw new Error("Feature is missing featureName; provide name in @UseFeatures spec");
+
+            const instance = new Fx();
+            (this as any)[name] = instance;
+            attachFeature(this as any, name, instance);
+        }
+
+        queueMicrotask(() => notifyFeaturesReady(this as any));
+
+        this.created?.();
     }
 
     /**

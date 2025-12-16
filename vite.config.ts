@@ -14,7 +14,7 @@ export default defineConfig({
             external: [],
         },
         sourcemap: true,
-        target: "es2020"
+        target: "es2022"
     },
     resolve: {
         alias: {
