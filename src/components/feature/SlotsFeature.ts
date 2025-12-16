@@ -22,6 +22,7 @@ import { FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycl
  */
 export default class SlotsFeature<TSlots extends string = never> implements FeatureLifecycle {
     static readonly featureName = "slots";
+    static readonly dependencies = [ChildrenFeature] as const;
 
     /** Хостовый layout, к которому подключена фича. */
     private host!: Layout;
@@ -56,7 +57,7 @@ export default class SlotsFeature<TSlots extends string = never> implements Feat
      */
     onInit(host: Layout) {
         this.host = host;
-        this.children = (host as any).children as ChildrenFeature | undefined;
+        this.children = host.getFeature(ChildrenFeature);
     }
 
     /**

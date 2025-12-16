@@ -48,4 +48,8 @@ export type FeatureCtor<
     Instance extends FeatureLifecycle<Host> = FeatureLifecycle<Host>
 > = (new (...args: any[]) => Instance) & {
     featureName: string;
+    dependencies?: readonly (
+        | FeatureCtor<any, any>
+        | { name?: string; feature: FeatureCtor<any, any> }
+    )[];
 };

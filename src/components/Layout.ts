@@ -1,8 +1,8 @@
 import { signal } from "@/utils/reactive";
 import DisposableScope from "@/utils/disposables";
-import {attachFeature, forEachFeature, notifyFeaturesReady} from "@/components/feature/featureRegistry";
+import {attachFeature, forEachFeature, getFeature as findFeature, notifyFeaturesReady} from "@/components/feature/featureRegistry";
 import {FeatureSpec, USE_FEATURES_KEY} from "@/components/feature/UseFeatures";
-import {FeatureCtor} from "@/components/feature/contracts/FeatureLifecycle";
+import {FeatureCtor, FeatureLifecycle} from "@/components/feature/contracts/FeatureLifecycle";
 
 /**
  * Internal symbol used to mark whether reactive properties have been
@@ -31,6 +31,22 @@ export type Hook = void | Promise<void>;
 function normalizeSpec(spec: FeatureSpec): { name: string; ctor: FeatureCtor<any, any> } {
     if (typeof spec === "function") return { name: spec.featureName, ctor: spec };
     return { name: spec.name ?? spec.feature.featureName, ctor: spec.feature };
+}
+
+function collectDependencies(spec: FeatureSpec, expose: boolean, acc: Map<string, { name: string; ctor: FeatureCtor<any, any>; expose: boolean }>) {
+    const { name, ctor } = normalizeSpec(spec);
+    if (!name) throw new Error("Feature is missing featureName; provide name in @UseFeatures spec");
+
+    const existing = acc.get(name);
+    if (existing) {
+        if (expose) existing.expose = true;
+        return;
+    }
+
+    const deps = ctor.dependencies ?? [];
+    for (const dep of deps) collectDependencies(dep, false, acc);
+
+    acc.set(name, { name, ctor, expose });
 }
 
 function collectFeatureSpecs(ctor: Function): FeatureSpec[] {
@@ -77,19 +93,29 @@ export default abstract class Layout {
     constructor() {
         const ctor = this.constructor as any;
         const specs = collectFeatureSpecs(ctor);
+        const plan = new Map<string, { name: string; ctor: FeatureCtor<any, any>; expose: boolean }>();
 
         for (const s of specs) {
-            const { name, ctor: Fx } = normalizeSpec(s);
-            if (!name) throw new Error("Feature is missing featureName; provide name in @UseFeatures spec");
+            collectDependencies(s, true, plan);
+        }
 
+        for (const { name, ctor: Fx, expose } of plan.values()) {
             const instance = new Fx();
-            (this as any)[name] = instance;
+            if (expose) (this as any)[name] = instance;
             attachFeature(this as any, name, instance);
         }
 
         queueMicrotask(() => notifyFeaturesReady(this as any));
 
         this.created?.();
+    }
+
+    /**
+     * Получить установленную фичу по имени или конструктору.
+     * Удобно для межфичевого взаимодействия и работы с зависимостями.
+     */
+    public getFeature<F extends FeatureLifecycle>(key: string | FeatureCtor<any, F>): F | undefined {
+        return findFeature(this as any, key) as F | undefined;
     }
 
     /**

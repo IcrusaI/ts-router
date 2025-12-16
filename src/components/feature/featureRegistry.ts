@@ -1,6 +1,6 @@
 import type Layout from "@/components/Layout";
 
-import {FeatureLifecycle} from "@/components/feature/contracts/FeatureLifecycle";
+import {FeatureCtor, FeatureLifecycle} from "@/components/feature/contracts/FeatureLifecycle";
 
 const FEATURE_STORE = new WeakMap<Layout, Map<string, FeatureLifecycle<Layout>>>();
 
@@ -25,6 +25,16 @@ export function attachFeature<H extends Layout, F extends FeatureLifecycle<H>>(
 
     bucket.set(key, feature as unknown as FeatureLifecycle<Layout>);
     feature.onInit?.(host);
+}
+
+export function getFeature(host: Layout, key: string | FeatureCtor<any, any>) {
+    const bucket = FEATURE_STORE.get(host);
+    if (!bucket) return;
+    if (typeof key === "string") return bucket.get(key);
+    for (const feature of bucket.values()) {
+        if (feature instanceof key) return feature;
+    }
+    return undefined;
 }
 
 /**
