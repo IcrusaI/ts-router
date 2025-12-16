@@ -1,13 +1,8 @@
-import {ChildrenFeature, Page} from "@icrusai/ts-router";
+import {ChildrenFeature, UseFeatures, Page} from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
-import {UseFeatures} from "../../src/components/feature/UseFeatures";
 
 @UseFeatures(ChildrenFeature)
 export default class HomePage extends Page {
-    /**
-     * Заголовок страницы устанавливается в created(). Не присваивайте здесь.
-     */
-    public title!: string;
 
 /*
     protected renderStructure() {
