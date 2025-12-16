@@ -1,6 +1,7 @@
-import {Feature, isLayoutLike} from "@/common/components/CoreLayout";
-import CoreLayout from "@/common/components/CoreLayout";
-import { ChildrenFeature } from "@/common/components/feature/ChildrenFeature";
+import {isLayout} from "@/components/Layout";
+import Layout from "@/components/Layout";
+import ChildrenFeature from "@/components/feature/ChildrenFeature";
+import { IFeature } from "@/components/IFeature";
 
 /**
  * Фича «слотов» на базе `<template slot="name">` с поддержкой
@@ -11,7 +12,7 @@ import { ChildrenFeature } from "@/common/components/feature/ChildrenFeature";
  * - Однократная «обёртка» шаблона маркерами-комментариями
  *   `<!--slot:name-start--> ... <!--slot:name-end-->` (см. {@link ensureWrapped});
  * - Вставка контента в слот через {@link setSlot}:
- *   строка, DOM-узел или другой `CoreLayout` (дочерний);
+ *   строка, DOM-узел или другой `Layout` (дочерний);
  * - «Отложенные слоты»: если `setSlot` вызван до появления DOM/шаблонов,
  *   контент накапливается в очереди и применяется при {@link onRootCreated}/{@link onMounted};
  * - Интеграция с {@link ChildrenFeature}: дочерние layout’ы монтируются через
@@ -19,9 +20,11 @@ import { ChildrenFeature } from "@/common/components/feature/ChildrenFeature";
  *
  * @typeParam TSlots Строковый литерал с допустимыми именами слотов.
  */
-export class SlotsFeature<TSlots extends string = never> implements Feature {
+export default class SlotsFeature<TSlots extends string = never> implements IFeature {
+    static readonly featureName = "slots";
+
     /** Хостовый layout, к которому подключена фича. */
-    private host!: CoreLayout;
+    private host!: Layout;
 
     /** Корневой DOM-элемент хоста (устанавливается в {@link onRootCreated}). */
     private root?: HTMLElement;
@@ -36,7 +39,7 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
      * Очередь «отложенных» вставок для слотов, когда шаблон ещё не найден.
      * Ключ — имя слота, значение — массив контента (строка/узел/дочерний layout).
      */
-    private readonly pending = new Map<string, Array<Node | string | CoreLayout>>();
+    private readonly pending = new Map<string, Array<Node | string | Layout>>();
 
     /** Флаг: идёт ли сейчас применение отложенных слотов (см. {@link flush}). */
     private flushing = false;
@@ -51,7 +54,7 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
      * Инициализация фичи: сохраняем хост и пробуем получить ссылку на
      * подключённую фичу детей (`layout.children`), если она есть.
      */
-    onInit(host: CoreLayout) {
+    onInit(host: Layout) {
         this.host = host;
         this.children = (host as any).children as ChildrenFeature | undefined;
     }
@@ -88,13 +91,13 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
      *   затем вставляется новый:
      *   - `string` → текстовый узел;
      *   - `Node` → как есть;
-     *   - `CoreLayout` → монтируется через {@link ChildrenFeature.attach} (если есть),
+     *   - `Layout` → монтируется через {@link ChildrenFeature.attach} (если есть),
      *     иначе через прямой `mountTo` (без каскадного destroy).
      *
      * @param name Имя слота.
      * @param content Текст, DOM-узел или дочерний layout.
      */
-    async setSlot(name: TSlots, content: Node | string | CoreLayout) {
+    async setSlot(name: TSlots, content: Node | string | Layout) {
         const key = String(name);
         if (!this.slotMap.has(key)) {
             const list = this.pending.get(key) ?? [];
@@ -116,7 +119,7 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
         // вставка нового содержимого
         if (typeof content === "string") {
             after.before(document.createTextNode(content));
-        } else if (isLayoutLike(content)) {
+        } else if (isLayout(content)) {
             if (this.children) {
                 const frag = document.createDocumentFragment();
                 await this.children.attach(content, frag);
@@ -147,7 +150,7 @@ export class SlotsFeature<TSlots extends string = never> implements Feature {
      */
     private ensureWrapped(name: string) {
         const tpl = this.slotMap.get(name);
-        if (!tpl) throw new Error(`Слот "${name}" не найден`);
+        if (!tpl) throw new Error(`Slot "${name}" not found`);
 
         let before = this.findMarker(name, "start");
         let after  = this.findMarker(name, "end");

@@ -30,8 +30,8 @@
  *
  * @example Базовое использование
  * ```ts
- * import Router from "@/common/router/Router";
- * import NotFoundPage from "@/common/components/NotFoundPage";
+ * import Router from "@/router/Router";
+ * import NotFoundPage from "@/components/NotFoundPage";
  *
  * const router = new Router(document.getElementById("app")!, {
  *   basePath: "/",
@@ -58,13 +58,16 @@
  * ```
  */
 
-import Page from "@/common/components/Page";
-import ParsedRoute from "@/common/router/ParsedRoute";
-import { PageCtor, PageProvider } from "@/common/router/types";
-import RouterOptions from "@/common/router/RouterOptions";
-import RouteOptions from "@/common/router/RouteOptions";
-import NavigationTarget from "@/common/router/NavigationTarget";
-import {effect} from "@/common/utils/reactive";
+import Page from "@/components/Page";
+import ParsedRoute from "@/router/ParsedRoute";
+import {PageCtor, PageProvider} from "@/router/types";
+import RouterOptions from "@/router/RouterOptions";
+import RouteOptions from "@/router/RouteOptions";
+import NavigationTarget from "@/router/NavigationTarget";
+import {effect, ReadWriteSignal} from "@/utils/reactive";
+import normalizeBase from "@/utils/NormalizeBase";
+import safeDecodeURI from "@/utils/SafeDecodeURI";
+import safeDecodeURIComponent from "@/utils/SafeDecodeURIComponent";
 
 /**
  * Центральный класс маршрутизации приложения.
@@ -78,7 +81,13 @@ import {effect} from "@/common/utils/reactive";
  * 6) обновление `document.title` на основании `Page.getTitle()`;
  * 7) управление историей браузера (`pushState`/`replaceState`) и intercept `<a>`.
  */
-export default class Router {
+class Router {
+    private static _instance: Router = new Router();
+
+    public static get instance(): Router {
+        return this._instance;
+    }
+
     /* ======================   PRIVATE FIELDS   ======================= */
 
     /**
@@ -109,20 +118,20 @@ export default class Router {
      * DOM-контейнер, в который монтируются страницы.
      * @private
      */
-    private readonly container: Element;
+    private  container!: Element;
 
     /**
      * Базовый префикс для приложения, напр. `"/app"` (по умолчанию `"/"`).
      * Используется в нормализации путей и при формировании URL в истории.
      * @private
      */
-    private readonly basePath: string;
+    private  basePath!: string;
 
     /**
      * Заголовок по умолчанию, если страница не предоставила свой.
      * @private
      */
-    private readonly defaultTitle: string;
+    private  defaultTitle!: string;
 
     /**
      * Функция-диспозер (отписка) для текущего эффекта,
@@ -166,7 +175,7 @@ export default class Router {
      * });
      * ```
      */
-    constructor(container: Element, opts: RouterOptions = {}) {
+    public init(container: Element, opts: RouterOptions = {}): Router {
         this.container = container;
         this.basePath = normalizeBase(opts.basePath ?? "/");
         this.defaultTitle = opts.defaultTitle ?? "App";
@@ -180,25 +189,16 @@ export default class Router {
                 { replace: true }
             );
         });
-    }
 
-    /**
-     * Инициализация роутера:
-     *  - выполняет первый рендер текущего URL;
-     *  - включает перехват кликов по внутренним ссылкам.
-     *
-     * Безопасно вызывать повторно — повторная инициализация не ломает состояние.
-     *
-     * @returns Промис, который завершится после первой отрисовки.
-     */
-    public async init(): Promise<void> {
-        await this.navigate(
+        this.navigate(
             window.location.pathname +
             window.location.search +
             window.location.hash,
             { replace: true }
-        );
-        this.interceptLinks();
+        )
+            .then(this.interceptLinks.bind(this))
+
+        return this;
     }
 
     /* =========================   API   ================================= */
@@ -312,7 +312,7 @@ export default class Router {
             params: match.params,
             meta: match.opts,
             query: new URLSearchParams(search),
-            queryObj: Object.fromEntries(new URLSearchParams(search).entries()),
+            queryObj: Object.fromEntries(new URLSearchParams(search)),
         };
         const fromTarget = await this.resolveCurrentTarget();
 
@@ -379,7 +379,7 @@ export default class Router {
             params: m?.params ?? {},
             meta: m?.opts ?? {},
             query: new URLSearchParams(qs),
-            queryObj: Object.fromEntries(new URLSearchParams(qs).entries()),
+            queryObj: Object.fromEntries(new URLSearchParams(qs)),
         };
     }
 
@@ -458,8 +458,11 @@ export default class Router {
 
         document.title = page.title || this.defaultTitle;
 
-        this.offTitleEffect = page.watchTitle((t) => {
-            document.title = t || this.defaultTitle;
+        const title = page.title as unknown as ReadWriteSignal<string>;
+        this.offTitleEffect = title;
+
+        effect(() => () => {
+            document.title = title() || this.defaultTitle;
         });
     }
 
@@ -648,50 +651,4 @@ export default class Router {
     }
 }
 
-/* ==========================  helpers  ============================== */
-
-/**
- * Нормализует `basePath`:
- *  - гарантирует ведущий `/`;
- *  - удаляет хвостовые `/`;
- *  - пустое значение приводит к `"/"`.
- *
- * @param base Пользовательский базовый путь.
- * @returns Нормализованный базовый путь.
- */
-function normalizeBase(base: string): string {
-    if (!base) return "/";
-    if (base === "/") return "/";
-    let b = base;
-    if (!b.startsWith("/")) b = "/" + b;
-    b = b.replace(/\/+$/, "");
-    return b || "/";
-}
-
-/**
- * Безопасный `decodeURI` (не бросает исключение при невалидной строке).
- *
- * @param v Строка для декодирования.
- * @returns Декодированное значение либо исходную строку при ошибке.
- */
-function safeDecodeURI(v: string): string {
-    try {
-        return decodeURI(v);
-    } catch {
-        return v;
-    }
-}
-
-/**
- * Безопасный `decodeURIComponent` (не бросает исключение при невалидной строке).
- *
- * @param v Строка для декодирования.
- * @returns Декодированное значение либо исходную строку при ошибке.
- */
-function safeDecodeURIComponent(v: string): string {
-    try {
-        return decodeURIComponent(v);
-    } catch {
-        return v;
-    }
-}
+export default new Router();

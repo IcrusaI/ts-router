@@ -7,8 +7,12 @@ function getUserIdFromPath(): string {
     return m?.[1] ?? "unknown";
 }
 
-export default class UserPage extends Page<"header" | "sidebar" | "content"> {
-    title = `User ${getUserIdFromPath()}`;
+export default class UserPage extends Page {
+    public title!: string;
+
+    protected created() {
+        this.title = `User ${getUserIdFromPath()}`;
+    }
 
     protected renderStructure() {
         const shell = new ShellLayout();

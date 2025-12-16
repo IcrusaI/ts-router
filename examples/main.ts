@@ -15,20 +15,17 @@ const requireAuth = async (to: any) => {
 
 const app = document.getElementById("app")!;
 
-const router = new Router(app, { basePath: "/", defaultTitle: "Examples" });
-
 // Routes
-router.register("/", () => import("./pages/HomePage"));
-router.register("/users/:id", () => import("./pages/UserPage"));
-router.register("/dashboard", () => import("./pages/DashboardPage"), { middlewares: [requireAuth] });
-router.register("/login", () => import("./pages/LoginPage"));
+Router.register("/", () => import("./pages/HomePage"));
+Router.register("/users/:id", () => import("./pages/UserPage"));
+Router.register("/dashboard", () => import("./pages/DashboardPage"), { middlewares: [requireAuth] });
+Router.register("/login", () => import("./pages/LoginPage"));
 
 // Redirect demo
-router.register("/redirect", () => import("./pages/HomePage"), { redirectTo: "/dashboard" });
+Router.register("/redirect", () => import("./pages/HomePage"), { redirectTo: "/dashboard" });
 
 // 404/ERROR
-router.setNotFound(NotFoundPage);
-router.setErrorPage(() => import("./pages/ErrorPage"));
+Router.setNotFound(NotFoundPage);
+Router.setErrorPage(() => import("./pages/ErrorPage"));
 
-// go!
-router.init();
+Router.init(app, { basePath: "/", defaultTitle: "Examples" });

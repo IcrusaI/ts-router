@@ -1,7 +1,11 @@
 import { Page } from "@icrusai/ts-router";
 
 export default class NotFoundPage extends Page {
-    title = "404 — Not Found";
+    public title!: string;
+
+    protected created() {
+        this.title = "404 — Not Found";
+    }
 
     protected renderStructure(): HTMLElement {
         const el = document.createElement("div");

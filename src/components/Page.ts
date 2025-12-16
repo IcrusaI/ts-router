@@ -1,5 +1,5 @@
-import Layout from "@/common/components/Layout";
-import {effect, ReadWriteSignal, signal} from "@/common/utils/reactive";
+import Layout from "@/components/Layout";
+import {reactive} from "@/utils/decorators";
 
 /**
  * =======================================================================
@@ -36,55 +36,9 @@ import {effect, ReadWriteSignal, signal} from "@/common/utils/reactive";
  * (наследуется от {@link Layout} и позволяет типобезопасно вызывать
  * {@link Layout.setSlot}).
  */
-export default abstract class Page<TSlots extends string = never> extends Layout<TSlots> {
-    /**
-     * @deprecated
-     * Метод оставлен для обратной совместимости.
-     * Возвращает текущее значение реактивного заголовка {@link title}.
-     *
-     * Вместо него рекомендуется использовать:
-     * ```ts
-     * this.title = "My Page";
-     * ```
-     */
-    public getTitle(): string {
-        return this.title;
-    }
-
-    /** приватный сигнал; не светится в публичных типах */
-    private _title$?: ReadWriteSignal<string>;
-
-    private get _titleSig(): ReadWriteSignal<string> {
-        // создастся при первом доступе (в т.ч. из created())
-        return (this._title$ ??= signal<string>(""));
-    }
-
-    /**
-     * Реактивный заголовок страницы.
-     *
-     * Используется для отображения названия текущей страницы во вкладке браузера.
-     * Роутер автоматически подписывается на изменения этого сигнала и
-     * обновляет `document.title` при каждом обновлении.
-     *
-     * Пример:
-     * ```ts
-     * title = Dashboard;
-     * ```
-     */
-    public get title(): string {
-        return this._titleSig();
-    }
-    public set title(v: string) {
-        this._titleSig.set(v);
-    }
-
-    /**
-     * Подписка на изменения заголовка. Возвращает функцию отписки.
-     * Роутер использует это, чтобы синхронизировать document.title.
-     */
-    public watchTitle(cb: (title: string) => void): () => void {
-        return effect(() => cb(this._titleSig()));
-    }
+export default abstract class Page extends Layout {
+    @reactive
+    public title: string = '';
 
     /**
      * Удобный доступ к параметрам текущей query-строки (`?key=value`).
@@ -118,6 +72,6 @@ export default abstract class Page<TSlots extends string = never> extends Layout
      * @protected
      */
     protected get queryObj(): Record<string, string> {
-        return Object.fromEntries(this.query.entries());
+        return Object.fromEntries(this.query);
     }
 }

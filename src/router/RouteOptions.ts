@@ -1,4 +1,4 @@
-import { BeforeEachHook } from "@/common/router/types";
+import { BeforeEachHook } from "@/router/types";
 
 /** Тонкие настройки маршрута */
 export default interface RouteOptions {
