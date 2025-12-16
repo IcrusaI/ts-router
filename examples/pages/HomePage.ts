@@ -34,9 +34,7 @@ export default class HomePage extends Page {
     }
 */
     protected renderStructure() {
-        // return new ShellLayout();
-        return '<p/>';
-
+        return new ShellLayout();
     }
 
 /*    // значение для {{ queryString }}

@@ -3,6 +3,7 @@ import * as path from "node:path";
 
 export default defineConfig({
     build: {
+        target: "es2022",
         lib: {
             entry: path.resolve(__dirname, "src/index.ts"),
             name: "TsRouter",
@@ -10,11 +11,9 @@ export default defineConfig({
             fileName: (format) => (format === "es" ? "index.js" : "index.cjs")
         },
         rollupOptions: {
-            // Внешние зависимости (если появятся) — помести сюда, чтобы не тащить в бандл
-            external: [],
+            external: []
         },
-        sourcemap: true,
-        target: "es2022"
+        sourcemap: true
     },
     resolve: {
         alias: {
