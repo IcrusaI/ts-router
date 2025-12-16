@@ -1,13 +1,15 @@
-import { Page } from "@icrusai/ts-router";
+import {ChildrenFeature, Page} from "@icrusai/ts-router";
+import {UseFeatures} from "../../src/components/feature/UseFeatures";
 import ShellLayout from "../layouts/ShellLayout";
 
+@UseFeatures(ChildrenFeature)
 export default class HomePage extends Page {
     /**
      * Заголовок страницы устанавливается в created(). Не присваивайте здесь.
      */
     public title!: string;
 
-    protected renderStructure() {
+  /*  protected renderStructure() {
         return this.html(`
           <layout type="ShellLayout">
             <template slot="header">
@@ -29,7 +31,10 @@ export default class HomePage extends Page {
           </layout>
         `, { ShellLayout });
     }
-
+*/
+    protected renderStructure() {
+        return new ShellLayout();
+    }
     // значение для {{ queryString }}
     get queryString(): string {
         return window.location.search || "—";

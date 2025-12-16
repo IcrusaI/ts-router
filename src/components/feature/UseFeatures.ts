@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import type { FeatureCtor } from "@/components/IFeature";
-import {attachFeature, notifyFeaturesReady} from "@/components/feature/featureRegistry";
+import {attachFeature, notifyFeaturesReady} from "./featureRegistry";
 
 // Спецификация одного элемента списка
 export type FeatureSpec =
