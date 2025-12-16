@@ -1,10 +1,15 @@
 import type Layout from "@/components/Layout";
 
-import {IFeature} from "@/components/IFeature";
+import {FeatureLifecycle} from "@/components/feature/contracts/FeatureLifecycle";
 
-const FEATURE_STORE = new WeakMap<Layout, Map<string, IFeature<Layout>>>();
+const FEATURE_STORE = new WeakMap<Layout, Map<string, FeatureLifecycle<Layout>>>();
 
-export function attachFeature<H extends Layout, F extends IFeature<H>>(
+/**
+ * Подключает фичу к экземпляру Layout и вызывает её `onInit`,
+ * храняя инстанс в реестре, чтобы позже можно было оповещать все
+ * фичи единообразно.
+ */
+export function attachFeature<H extends Layout, F extends FeatureLifecycle<H>>(
     host: H,
     key: string,
     feature: F,
@@ -18,16 +23,22 @@ export function attachFeature<H extends Layout, F extends IFeature<H>>(
         throw new Error(`Feature "${key}" already installed`);
     }
 
-    bucket.set(key, feature as unknown as IFeature<Layout>);
+    bucket.set(key, feature as unknown as FeatureLifecycle<Layout>);
     feature.onInit?.(host);
 }
 
-export function forEachFeature(host: Layout, cb: (feature: IFeature<Layout>) => void) {
+/**
+ * Обходит все подключённые фичи и последовательно вызывает переданный колбэк.
+ */
+export function forEachFeature(host: Layout, cb: (feature: FeatureLifecycle<Layout>) => void) {
     const bucket = FEATURE_STORE.get(host);
     if (!bucket) return;
     for (const f of bucket.values()) cb(f);
 }
 
+/**
+ * Уведомляет все фичи, что хост готов (после конструирования и microtask).
+ */
 export function notifyFeaturesReady(host: Layout) {
     forEachFeature(host, (feature) => void feature.onFeaturesReady?.(host));
 }

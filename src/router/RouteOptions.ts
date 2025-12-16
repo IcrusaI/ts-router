@@ -1,9 +1,9 @@
-import { BeforeEachHook } from "@/router/types";
+import { NavigationGuard } from "@/router/contracts/NavigationGuard";
 
 /** Тонкие настройки маршрута */
 export default interface RouteOptions {
     /** Массив before‑each guards (выполняются последовательно) */
-    middlewares?: BeforeEachHook[];
+    middlewares?: NavigationGuard[];
     /** Автоматический редирект */
     redirectTo?: string;
 }

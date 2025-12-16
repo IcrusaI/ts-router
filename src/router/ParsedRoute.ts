@@ -1,5 +1,5 @@
 import RouteOptions from "@/router/RouteOptions";
-import { PageCtor } from "@/router/types";
+import { PageClass } from "@/router/contracts/PageContracts";
 
 export default interface ParsedRoute {
     /** Оригинальный паттерн ("/posts/:slug") для отладки */
@@ -9,7 +9,7 @@ export default interface ParsedRoute {
     /** Имена `:params` в порядке появления */
     paramNames: string[];
     /** Фабрика класса страницы */
-    loadPage: () => Promise<PageCtor>;
+    loadPage: () => Promise<PageClass>;
     /** Опции маршрута */
     opts: RouteOptions;
 }

@@ -1,5 +1,5 @@
 import Layout from "@/components/Layout";
-import { IFeature } from "@/components/IFeature";
+import { FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
 
 /**
  * Фича управления дочерними компонентами (каскадный жизненный цикл + композиция).
@@ -14,7 +14,7 @@ import { IFeature } from "@/components/IFeature";
  *   возвращаем host вместо layout; пару {host, child} кладём в pending.
  * - onMounted(): монтируем все pending children в соответствующие host.
  */
-export default class ChildrenFeature implements IFeature<Layout> {
+export default class ChildrenFeature implements FeatureLifecycle<Layout> {
     static readonly featureName = "children";
 
     private host?: Layout;
@@ -33,7 +33,7 @@ export default class ChildrenFeature implements IFeature<Layout> {
     private readonly pending: Array<{ hostEl: HTMLElement; child: Layout }> = [];
 
     // -----------------------
-    // IFeature hooks
+    // FeatureLifecycle hooks
     // -----------------------
 
     onInit(host: Layout): void {

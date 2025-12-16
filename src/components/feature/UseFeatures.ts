@@ -1,6 +1,10 @@
 import type Layout from "@/components/Layout";
-import type { FeatureCtor } from "@/components/IFeature";
+import type { FeatureCtor } from "@/components/feature/contracts/FeatureLifecycle";
 
+/**
+ * Спецификация фичи для декоратора {@link UseFeatures}.
+ * Можно передать сам конструктор с `featureName` или объект с явным именем.
+ */
 export type FeatureSpec =
     | FeatureCtor<any, any>
     | { name?: string; feature: FeatureCtor<any, any> };

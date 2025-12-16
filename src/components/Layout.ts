@@ -1,8 +1,8 @@
 import { signal } from "@/utils/reactive";
+import DisposableScope from "@/utils/disposables";
 import {attachFeature, forEachFeature, notifyFeaturesReady} from "@/components/feature/featureRegistry";
-import TemplateFeature from "@/components/feature/TemplateFeature";
-import {FeatureSpec, USE_FEATURES_KEY, UseFeatures} from "@/components/feature/UseFeatures";
-import {FeatureCtor} from "@/components/IFeature";
+import {FeatureSpec, USE_FEATURES_KEY} from "@/components/feature/UseFeatures";
+import {FeatureCtor} from "@/components/feature/contracts/FeatureLifecycle";
 
 /**
  * Internal symbol used to mark whether reactive properties have been
@@ -65,12 +65,9 @@ export default abstract class Layout {
     private _mounted = false;
 
     /**
-     * Зарегистрированные отписчики DOM-событий, добавленных через {@link addEvent}.
-     * При destroy() каждый будет вызван для снятия соответствующего listener’а.
+     * Общий контейнер для всех disposer-функций (DOM-события, эффекты и т.п.).
      */
-    private readonly listeners: Array<() => void> = [];
-
-    private readonly cleanups: Array<() => Promise<void>> = [];
+    private readonly disposables = new DisposableScope();
 
 
     /**
@@ -173,9 +170,7 @@ export default abstract class Layout {
     private registerCleanup(cleanup: any) {
         if (!cleanup) return;
         if (typeof cleanup === "function") {
-            this.cleanups.push(async () => {
-                await cleanup();
-            });
+            this.disposables.add(async () => { await cleanup(); });
         }
     }
     /**
@@ -246,7 +241,7 @@ export default abstract class Layout {
             });
 
             // снимаем зарегистрированные cleanup-и (в т.ч. от onMounted/afterMounted/effect)
-            for (const c of this.cleanups.splice(0)) await c();
+            await this.disposables.flush();
 
             this.root.remove();
             this._mounted = false;
@@ -257,16 +252,15 @@ export default abstract class Layout {
             });
 
             // cleanup-и afterDestroy
-            for (const c of this.cleanups.splice(0)) await c();
+            await this.disposables.flush();
 
             await this.unmounted?.();
         } else {
             // если не смонтирован — всё равно снять cleanup-и (effects и т.п.)
-            for (const c of this.cleanups.splice(0)) await c();
+            await this.disposables.flush();
         }
 
-        this.listeners.forEach((off) => off());
-        this.listeners.length = 0;
+        await this.disposables.flush();
     }
 
 
@@ -298,6 +292,7 @@ export default abstract class Layout {
      * @throws Если {@link renderStructure} вернул неподдерживаемый тип.
      */
     private ensureRoot(): void {
+        this.ensureReactiveProps();
         forEachFeature(this, (f: any) => f.beforeRender?.());
 
         let node: any = this.renderStructure();
@@ -311,7 +306,7 @@ export default abstract class Layout {
             const out = f.afterRender(node);
             // если фича вернула Promise — это ошибка конфигурации (см. комментарий выше)
             if (out && typeof (out as any).then === "function") {
-                throw new Error("IFeature.afterRender() must be synchronous in current Layout.ensureRoot()");
+                throw new Error("FeatureLifecycle.afterRender() must be synchronous in current Layout.ensureRoot()");
             }
             node = out;
         });
@@ -377,8 +372,7 @@ export default abstract class Layout {
         type: K,
         handler: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any
     ): void {
-        el.addEventListener(type, handler);
-        this.listeners.push(() => el.removeEventListener(type, handler));
+        this.disposables.listen(el, type, handler as EventListener);
     }
 
     // —— overridables ————————————————————————————————————————————————

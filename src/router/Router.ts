@@ -60,11 +60,11 @@
 
 import Page from "@/components/Page";
 import ParsedRoute from "@/router/ParsedRoute";
-import {PageCtor, PageProvider} from "@/router/types";
 import RouterOptions from "@/router/RouterOptions";
 import RouteOptions from "@/router/RouteOptions";
 import NavigationTarget from "@/router/NavigationTarget";
-import {effect, ReadWriteSignal} from "@/utils/reactive";
+import {PageClass, PageResolver} from "@/router/contracts/PageContracts";
+import DisposableScope from "@/utils/disposables";
 import normalizeBase from "@/utils/NormalizeBase";
 import safeDecodeURI from "@/utils/SafeDecodeURI";
 import safeDecodeURIComponent from "@/utils/SafeDecodeURIComponent";
@@ -106,13 +106,13 @@ class Router {
      * Ленивая фабрика для страницы 404 (“not found”).
      * @private
      */
-    private notFoundPage?: () => Promise<PageCtor>;
+    private notFoundPage?: () => Promise<PageClass>;
 
     /**
      * Ленивая фабрика для страницы ошибок (“error page”).
      * @private
      */
-    private errorPage?: () => Promise<PageCtor>;
+    private errorPage?: () => Promise<PageClass>;
 
     /**
      * DOM-контейнер, в который монтируются страницы.
@@ -134,22 +134,16 @@ class Router {
     private  defaultTitle!: string;
 
     /**
-     * Функция-диспозер (отписка) для текущего эффекта,
-     * синхронизирующего `document.title` с реактивным заголовком {@link Page.title}.
-     *
-     * Каждый раз при монтировании новой страницы (`mountPage`) создаётся новый
-     * эффект через {@link effect}, который подписывается на `page.title$()`.
-     * Когда происходит переход на другую страницу, предыдущий эффект вызывается
-     * (через `offTitleEffect()`), чтобы:
-     *  - снять все подписки с предыдущего сигнала;
-     *  - предотвратить утечки памяти;
-     *  - исключить дублирование обновлений заголовка.
-     *
-     * Значение `null` означает, что активный эффект отсутствует.
-     *
-     * @private
+     * Контейнер для реактивных эффектов текущей страницы (заголовок и пр.).
+     * Позволяет единообразно снимать эффекты перед монтированием нового Page.
      */
-    private offTitleEffect: (() => void) | null = null;
+    private readonly titleScope = new DisposableScope();
+
+    /**
+     * Контейнер для глобальных подписок на события (popstate, click и т.д.).
+     * Держит их в одном месте и упрощает возможную перерегистрацию.
+     */
+    private readonly eventScope = new DisposableScope();
 
     /**
      * Навигационный токен для защиты от гонок.
@@ -180,23 +174,15 @@ class Router {
         this.basePath = normalizeBase(opts.basePath ?? "/");
         this.defaultTitle = opts.defaultTitle ?? "App";
 
+        void this.eventScope.flush();
+
         // Переходы «назад/вперёд» в браузере
-        window.addEventListener("popstate", () => {
-            void this.navigate(
-                window.location.pathname +
-                window.location.search +
-                window.location.hash,
-                { replace: true }
-            );
+        this.eventScope.listen(window, "popstate", () => {
+            void this.navigate(this.currentLocation(), { replace: true });
         });
 
-        this.navigate(
-            window.location.pathname +
-            window.location.search +
-            window.location.hash,
-            { replace: true }
-        )
-            .then(this.interceptLinks.bind(this))
+        this.navigate(this.currentLocation(), { replace: true })
+            .then(() => this.interceptLinks())
 
         return this;
     }
@@ -211,7 +197,7 @@ class Router {
      * @param provider Провайдер страницы. Может быть:
      *  - конструктором класса, наследованного от {@link Page};
      *  - функцией `() => import("...")` с дефолтным экспортом класса страницы;
-     *  - функцией, возвращающей сам класс (`Promise<PageCtor> | PageCtor`).
+     *  - функцией, возвращающей сам класс (`Promise<PageClass> | PageClass`).
      * @param opts Опции маршрута:
      *  - `middlewares` — массив хуков-гвардов, которые выполняются последовательно
      *    до монтирования страницы; возврат `false` отменяет переход;
@@ -226,7 +212,7 @@ class Router {
      */
     public register(
         pattern: string,
-        provider: PageProvider,
+        provider: PageResolver,
         opts: RouteOptions = {}
     ): void {
         this.routes.push({
@@ -241,7 +227,7 @@ class Router {
      *
      * @param provider Провайдер 404-страницы (синхронный класс или динамический import).
      */
-    public setNotFound(provider: PageProvider): void {
+    public setNotFound(provider: PageResolver): void {
         this.notFoundPage = this.wrapProvider(provider);
     }
 
@@ -250,7 +236,7 @@ class Router {
      *
      * @param provider Провайдер error-страницы (синхронный класс или динамический import).
      */
-    public setErrorPage(provider: PageProvider): void {
+    public setErrorPage(provider: PageResolver): void {
         this.errorPage = this.wrapProvider(provider);
     }
 
@@ -288,16 +274,7 @@ class Router {
     ): Promise<void> {
         const { replace = false, query } = opts;
 
-        // Собираем URL с учётом basePath
-        const url = new URL(to, window.location.origin);
-        if (query) {
-            const sp = new URLSearchParams(url.search);
-            for (const [k, v] of Object.entries(query)) {
-                if (v === null || v === undefined) sp.delete(k);
-                else sp.set(k, String(v));
-            }
-            url.search = sp.toString();
-        }
+        const url = this.buildUrl(to, query);
 
         const fullPath = url.pathname + (url.search || "") + (url.hash || "");
         const destPath = this.normalize(fullPath);
@@ -357,6 +334,36 @@ class Router {
     }
 
     /* ======================   INTERNAL HELPERS   ====================== */
+
+    /**
+     * Возвращает текущий путь браузера вместе с query/hash без учёта basePath.
+     * Используется для первичной и обратной навигации (popstate).
+     */
+    private currentLocation(): string {
+        return window.location.pathname + window.location.search + window.location.hash;
+    }
+
+    /**
+     * Строит URL назначения с учётом дополнительного `query`.
+     *
+     * @param to Цель навигации (абсолютная или относительная).
+     * @param query Патч для параметров строки запроса.
+     */
+    private buildUrl(
+        to: string,
+        query?: Record<string, string | number | boolean | null | undefined>,
+    ): URL {
+        const url = new URL(to, window.location.origin);
+        if (!query) return url;
+
+        const searchParams = new URLSearchParams(url.search);
+        for (const [key, value] of Object.entries(query)) {
+            if (value === null || value === undefined) searchParams.delete(key);
+            else searchParams.set(key, String(value));
+        }
+        url.search = searchParams.toString();
+        return url;
+    }
 
     /**
      * Формирует {@link NavigationTarget} для текущего URL.
@@ -433,8 +440,8 @@ class Router {
      *    - подписывается на сигнал {@link Page.title};
      *    - автоматически обновляет `document.title` при каждом изменении заголовка;
      *    - сбрасывает заголовок на `defaultTitle`, если значение пустое.
-     * 5. Эффект сохраняется в `offTitleEffect`, чтобы его можно было
-     *    безопасно удалить при следующем переходе.
+     * 5. Эффект добавляется в {@link titleScope}, поэтому при следующем переходе
+     *    все связанные подписки снимаются одним вызовом `flush()`.
      *
      * @param page Экземпляр страницы, которую требуется смонтировать.
      * @returns Промис, завершающийся после монтирования страницы
@@ -450,19 +457,14 @@ class Router {
      * @internal
      */
     private async mountPage(page: Page): Promise<void> {
-        if (this.offTitleEffect) { this.offTitleEffect(); this.offTitleEffect = null; }
+        await this.titleScope.flush();
         await this.currentPage?.destroy();
 
         await page.mountTo(this.container);
         this.currentPage = page;
 
-        document.title = page.title || this.defaultTitle;
-
-        const title = page.title as unknown as ReadWriteSignal<string>;
-        this.offTitleEffect = title;
-
-        effect(() => () => {
-            document.title = title() || this.defaultTitle;
+        this.titleScope.effect(() => {
+            document.title = page.title || this.defaultTitle;
         });
     }
 
@@ -546,18 +548,18 @@ class Router {
      * Поддерживает как синхронный класс, так и динамический import.
      *
      * @param p Провайдер страницы: класс или функция, возвращающая класс/модуль.
-     * @returns Фабрика `() => Promise<PageCtor>`.
+     * @returns Фабрика `() => Promise<PageClass>`.
      * @internal
      */
-    private wrapProvider(p: PageProvider): () => Promise<PageCtor> {
+    private wrapProvider(p: PageResolver): () => Promise<PageClass> {
         // Синхронный класс (имеет prototype.mountTo)
         if (typeof p === "function" && (p as any).prototype?.mountTo) {
-            return () => Promise.resolve(p as PageCtor);
+            return () => Promise.resolve(p as PageClass);
         }
         // Динамический import
         return async () => {
             const mod = await (p as () => Promise<any>)();
-            return ("default" in mod ? mod.default : mod) as PageCtor;
+            return ("default" in mod ? mod.default : mod) as PageClass;
         };
     }
 
@@ -604,7 +606,7 @@ class Router {
      * @internal
      */
     private interceptLinks(): void {
-        document.addEventListener("click", (e) => {
+        this.eventScope.listen(document, "click", (e) => {
             // Только обычный левый клик без модификаторов
             const me = e as MouseEvent;
             if (

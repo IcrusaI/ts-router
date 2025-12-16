@@ -1,7 +1,7 @@
 import {isLayout} from "@/components/Layout";
 import Layout from "@/components/Layout";
 import ChildrenFeature from "@/components/feature/ChildrenFeature";
-import { IFeature } from "@/components/IFeature";
+import { FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
 
 /**
  * Фича «слотов» на базе `<template slot="name">` с поддержкой
@@ -20,7 +20,7 @@ import { IFeature } from "@/components/IFeature";
  *
  * @typeParam TSlots Строковый литерал с допустимыми именами слотов.
  */
-export default class SlotsFeature<TSlots extends string = never> implements IFeature {
+export default class SlotsFeature<TSlots extends string = never> implements FeatureLifecycle {
     static readonly featureName = "slots";
 
     /** Хостовый layout, к которому подключена фича. */

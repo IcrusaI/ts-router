@@ -1,8 +1,7 @@
-import type { IFeature } from "@/components/IFeature";
+import type { FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
 import type Layout from "@/components/Layout";
-import { effect } from "@/utils/reactive";
+import DisposableScope from "@/utils/disposables";
 import type ChildrenFeature from "@/components/feature/ChildrenFeature";
-import type SlotsFeature from "@/components/feature/SlotsFeature";
 
 /**
  * TemplateFeature — расширенный шаблонизатор для Layout.
@@ -19,13 +18,13 @@ import type SlotsFeature from "@/components/feature/SlotsFeature";
  * class MyLayout extends Layout {}
  * ```
  */
-export default class TemplateFeature implements IFeature {
+export default class TemplateFeature implements FeatureLifecycle {
     static readonly featureName = "template";
 
     /** Хостовый layout, для которого подключена фича. */
     private host!: Layout;
-    /** Список disposer-функций эффектов, чтобы очистить при destroy. */
-    private disposers: Array<() => void> = [];
+    /** Скоуп диспозеров для реактивных биндингов внутри шаблона. */
+    private readonly disposables = new DisposableScope();
     /** Ссылка на ChildrenFeature хоста (если есть) для регистрации дочерних layout’ов. */
     private children?: ChildrenFeature;
 
@@ -41,8 +40,7 @@ export default class TemplateFeature implements IFeature {
      * Очистка: вызывается при уничтожении хоста. Здесь снимаются все эффекты.
      */
     onDestroy() {
-        for (const dispose of this.disposers) dispose();
-        this.disposers.length = 0;
+        void this.disposables.flush();
     }
 
     /**
@@ -102,7 +100,7 @@ export default class TemplateFeature implements IFeature {
             const placeholders = fragment.querySelectorAll(`[data-bind="${id}"]`);
             placeholders.forEach(node => {
                 const el = node as HTMLElement;
-                const dispose = effect(() => {
+                const dispose = this.disposables.effect(() => {
                     let value: any = this.host as any;
                     for (const part of expr.split(".")) {
                         if (value == null) break;
@@ -111,7 +109,6 @@ export default class TemplateFeature implements IFeature {
                     if (typeof value === "function") value = value.call(this.host);
                     el.textContent = value != null ? String(value) : "";
                 });
-                this.disposers.push(dispose);
             });
         }
 

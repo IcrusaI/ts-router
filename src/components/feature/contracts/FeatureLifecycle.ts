@@ -1,9 +1,21 @@
 import Layout from "@/components/Layout";
 
+/**
+ * Очиститель, который может вернуть любой хук фичи.
+ * Может быть синхронным или асинхронным.
+ */
 export type HookCleanup = void | (() => void | Promise<void>);
+
+/**
+ * Утилитарный тип для описания хуков, которые могут быть асинхронными.
+ */
 export type MaybePromise<T> = T | Promise<T>;
 
-export interface IFeature<Host extends Layout = Layout> {
+/**
+ * Базовый контракт для фичи компонента. Каждая фича может реагировать
+ * на жизненный цикл {@link Layout} и добавлять свои возможности хосту.
+ */
+export interface FeatureLifecycle<Host extends Layout = Layout> {
     onInit?(host: Host): MaybePromise<void>;
     onFeaturesReady?(host: Host): MaybePromise<void>;
 
@@ -33,7 +45,7 @@ export interface IFeature<Host extends Layout = Layout> {
  */
 export type FeatureCtor<
     Host extends Layout = Layout,
-    Instance extends IFeature<Host> = IFeature<Host>
+    Instance extends FeatureLifecycle<Host> = FeatureLifecycle<Host>
 > = (new (...args: any[]) => Instance) & {
     featureName: string;
 };

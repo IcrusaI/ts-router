@@ -1,6 +1,6 @@
 import type Layout from "@/components/Layout";
 import {attachFeature} from "@/components/feature/featureRegistry";
-import {IFeature} from "@/components/IFeature";
+import {FeatureLifecycle} from "@/components/feature/contracts/FeatureLifecycle";
 
 /**
  * Декоратор поля фичи.
@@ -12,9 +12,9 @@ import {IFeature} from "@/components/IFeature";
  * }
  */
 export default function Feature(
-    ctor: new (...args: any[]) => IFeature<any>,
+    ctor: new (...args: any[]) => FeatureLifecycle<any>,
 ) {
-    return <This extends Layout, V extends IFeature<This>>(
+    return <This extends Layout, V extends FeatureLifecycle<This>>(
         _value: undefined,
         context: ClassFieldDecoratorContext<This, V>,
     ) => {
