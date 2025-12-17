@@ -1,7 +1,7 @@
 import { signal } from "@/utils/reactive";
 import DisposableScope from "@/utils/disposables";
 import {attachFeature, forEachFeature, getFeature as findFeature, notifyFeaturesReady} from "@/components/feature/featureRegistry";
-import {FeatureSpec, USE_FEATURES_KEY} from "@/components/feature/UseFeatures";
+import { buildFeaturePlan, collectFeatureSpecs } from "@/components/feature/featureSpecs";
 import {FeatureCtor, FeatureLifecycle} from "@/components/feature/contracts/FeatureLifecycle";
 
 /**
@@ -27,39 +27,6 @@ interface ReactiveConstructor extends Function {
  * Хук может быть синхронным (void) или асинхронным (Promise<void>).
  */
 export type Hook = void | Promise<void>;
-
-function normalizeSpec(spec: FeatureSpec): { name: string; ctor: FeatureCtor<any, any> } {
-    if (typeof spec === "function") return { name: spec.featureName, ctor: spec };
-    return { name: spec.name ?? spec.feature.featureName, ctor: spec.feature };
-}
-
-function collectDependencies(spec: FeatureSpec, expose: boolean, acc: Map<string, { name: string; ctor: FeatureCtor<any, any>; expose: boolean }>) {
-    const { name, ctor } = normalizeSpec(spec);
-    if (!name) throw new Error("Feature is missing featureName; provide name in @UseFeatures spec");
-
-    const existing = acc.get(name);
-    if (existing) {
-        if (expose) existing.expose = true;
-        return;
-    }
-
-    const deps = ctor.dependencies ?? [];
-    for (const dep of deps) collectDependencies(dep, false, acc);
-
-    acc.set(name, { name, ctor, expose });
-}
-
-function collectFeatureSpecs(ctor: Function): FeatureSpec[] {
-    // поддержка наследования: собираем спеки по цепочке прототипов конструкторов
-    const out: FeatureSpec[] = [];
-    let cur: any = ctor;
-    while (cur && cur !== Function.prototype) {
-        const s: FeatureSpec[] | undefined = cur[USE_FEATURES_KEY];
-        if (s) out.push(...s);
-        cur = Object.getPrototypeOf(cur);
-    }
-    return out;
-}
 
 /**
  * Базовый минимальный layout-ядро без фреймворка.
@@ -93,16 +60,12 @@ export default abstract class Layout {
     constructor() {
         const ctor = this.constructor as any;
         const specs = collectFeatureSpecs(ctor);
-        const plan = new Map<string, { name: string; ctor: FeatureCtor<any, any>; expose: boolean }>();
+        const plan = buildFeaturePlan(specs);
 
-        for (const s of specs) {
-            collectDependencies(s, true, plan);
-        }
-
-        for (const { name, ctor: Fx, expose } of plan.values()) {
-            const instance = new Fx();
-            if (expose) (this as any)[name] = instance;
-            attachFeature(this as any, name, instance);
+        for (const { name, ctor: Fx, expose, instance } of plan) {
+            const featureInstance = instance ?? new Fx();
+            if (expose) (this as any)[name] = featureInstance;
+            attachFeature(this as any, name, featureInstance);
         }
 
         queueMicrotask(() => notifyFeaturesReady(this as any));

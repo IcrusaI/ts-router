@@ -14,7 +14,7 @@ import ChildrenFeature from "@/components/feature/ChildrenFeature";
  *
  * Для подключения используй декоратор {@link UseFeatures}:
  * ```ts
- * @UseFeatures(TemplateFeature)
+ * @UseFeatures({ feature: TemplateFeature })
  * class MyLayout extends Layout {}
  * ```
  */

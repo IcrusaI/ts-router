@@ -48,8 +48,9 @@ export type FeatureCtor<
     Instance extends FeatureLifecycle<Host> = FeatureLifecycle<Host>
 > = (new (...args: any[]) => Instance) & {
     featureName: string;
-    dependencies?: readonly (
-        | FeatureCtor<any, any>
-        | { name?: string; feature: FeatureCtor<any, any> }
-    )[];
+    /**
+     * Зависимости фичи. Указываются только через конструкторы фич
+     * без объектов-обёрток и без кастомных имён.
+     */
+    dependencies?: readonly FeatureCtor<any, any>[];
 };
