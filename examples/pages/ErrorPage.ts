@@ -1,11 +1,6 @@
 import { Page } from "@icrusai/ts-router";
 
 export default class ErrorPage extends Page {
-    /**
-     * Заголовок страницы устанавливается в created(). Не присваивайте здесь.
-     */
-    public title!: string;
-
     protected created() {
         this.title = "Error";
     }

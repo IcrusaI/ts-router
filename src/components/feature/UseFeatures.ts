@@ -1,18 +1,12 @@
 import type Layout from "@/components/Layout";
 import { collectFeatureSpecs, type FeatureFields, type FeatureSpec, USE_FEATURES_KEY } from "@/components/feature/featureSpecs";
 
-type StaticPart<T> = Omit<T, "prototype">;
-
-export type FeaturefulConstructor<
-    Ctor extends abstract new (...args: any[]) => any,
-    Specs extends readonly FeatureSpec[],
-    Instance = InstanceType<Ctor> & FeatureFields<Specs>,
-> = StaticPart<Ctor> & (abstract new (...args: ConstructorParameters<Ctor>) => Instance);
+type AnyCtor<TInstance = unknown, TArgs extends any[] = any[]> = abstract new (...args: TArgs) => TInstance;
 
 export type ClassWithFeatures<
-    Ctor extends abstract new (...args: any[]) => any,
+    Ctor extends AnyCtor,
     Specs extends readonly FeatureSpec[]
-> = FeaturefulConstructor<Ctor, Specs>;
+> = abstract new (...args: ConstructorParameters<Ctor>) => InstanceType<Ctor> & FeatureFields<Specs>;
 
 /**
  * Подключение фич через миксин, без декораторов.
@@ -20,15 +14,21 @@ export type ClassWithFeatures<
  * Пример:
  *   class MyLayout extends withFeatures(Layout, SlotsFeature) {}
  */
-export function withFeatures<const Specs extends readonly FeatureSpec[], const Base extends abstract new (...args: any[]) => Layout>(
+export function withFeatures<const Specs extends readonly FeatureSpec[], const Base extends AnyCtor<Layout>>(
     Base: Base,
     ...specs: Specs
 ): ClassWithFeatures<Base, Specs> {
     const inherited = collectFeatureSpecs(Base);
-    abstract class Featureful extends Base {}
-    (Featureful as any)[USE_FEATURES_KEY] = [...inherited, ...specs];
-    type FeaturefulCtor = abstract new (...args: ConstructorParameters<Base>) => InstanceType<Base> & FeatureFields<Specs>;
-    return Featureful as unknown as FeaturefulCtor & Base;
+    abstract class Featureful extends Base {
+        // требование TS для mixin: единый rest-ctor any[]
+        // eslint-disable-next-line @typescript-eslint/no-useless-constructor
+        constructor(...args: any[]) { super(...args as any); }
+    }
+    (Featureful as unknown as Record<typeof USE_FEATURES_KEY, FeatureSpec[]>)[USE_FEATURES_KEY] = [
+        ...inherited,
+        ...specs,
+    ];
+    return Featureful as unknown as ClassWithFeatures<Base, Specs>;
 }
 
 export { USE_FEATURES_KEY } from "@/components/feature/featureSpecs";

@@ -1,12 +1,13 @@
+import type Layout from "@/components/Layout";
 import type { FeatureCtor, FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
 
-export type FeatureRequest = { name?: string; feature: FeatureCtor<any, any, any> };
-export type FeatureSpec = FeatureRequest | FeatureCtor<any, any, any>;
+export type FeatureRequest = { name?: string; feature: FeatureCtor<Layout, FeatureLifecycle, string> };
+export type FeatureSpec = FeatureRequest | FeatureCtor<Layout, FeatureLifecycle, string>;
 
-export type FeatureNameFromSpec<S extends FeatureSpec> = S extends FeatureCtor<any, any, infer FN>
+export type FeatureNameFromSpec<S extends FeatureSpec> = S extends FeatureCtor<Layout, any, infer FN>
     ? FN
     : S extends { feature: infer F }
-        ? F extends FeatureCtor<any, any, infer FN>
+        ? F extends FeatureCtor<Layout, any, infer FN>
             ? S extends { name: infer N }
                 ? N extends string
                     ? N
@@ -15,10 +16,10 @@ export type FeatureNameFromSpec<S extends FeatureSpec> = S extends FeatureCtor<a
             : never
         : never;
 
-export type FeatureInstanceFromSpec<S extends FeatureSpec> = S extends FeatureCtor<any, infer I>
+export type FeatureInstanceFromSpec<S extends FeatureSpec> = S extends FeatureCtor<Layout, infer I>
     ? I
     : S extends { feature: infer F }
-        ? F extends FeatureCtor<any, infer Instance>
+        ? F extends FeatureCtor<Layout, infer Instance>
             ? Instance
             : never
         : never;
@@ -29,25 +30,25 @@ export type FeatureFields<Specs extends readonly FeatureSpec[]> = {
 
 export type FeaturePlanEntry = {
     name: string;
-    ctor: FeatureCtor<any, any, any>;
+    ctor: FeatureCtor<Layout, FeatureLifecycle, string>;
     expose: boolean;
-    instance?: FeatureLifecycle<any>;
+    instance?: FeatureLifecycle;
 };
 
 export const USE_FEATURES_KEY = Symbol.for("@@useFeaturesSpecs");
 
 export function collectFeatureSpecs(ctor: Function): FeatureSpec[] {
     const out: FeatureSpec[] = [];
-    let cur: any = ctor;
-    while (cur && cur !== Function.prototype) {
-        const specs: FeatureSpec[] | undefined = cur[USE_FEATURES_KEY];
+    let cur: unknown = ctor;
+    while (typeof cur === "function" && cur !== Function.prototype) {
+        const specs = (cur as { [USE_FEATURES_KEY]?: FeatureSpec[] })[USE_FEATURES_KEY];
         if (specs) out.push(...specs);
         cur = Object.getPrototypeOf(cur);
     }
     return out;
 }
 
-function normalizeSpec(spec: FeatureSpec): { request: FeatureRequest; instance?: FeatureLifecycle<any> } {
+function normalizeSpec(spec: FeatureSpec): { request: FeatureRequest; instance?: FeatureLifecycle } {
     if (typeof spec === "function") return { request: { feature: spec }, instance: undefined };
     return { request: spec, instance: undefined };
 }

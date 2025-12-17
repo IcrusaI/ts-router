@@ -8,7 +8,6 @@ function getUserIdFromPath(): string {
 }
 
 export default class UserPage extends Page {
-    public title!: string;
 
     protected created() {
         this.title = `User ${getUserIdFromPath()}`;

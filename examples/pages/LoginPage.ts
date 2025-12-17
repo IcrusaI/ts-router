@@ -1,16 +1,11 @@
-import { Page, reactive } from "@icrusai/ts-router";
+import { Page, reactive, withFeatures, TemplateFeature } from "@icrusai/ts-router";
 
 /**
  * Пример страницы авторизации.
  * Использует метод html() для генерации DOM и добавляет
  * обработчик клика в mounted().
  */
-export default class LoginPage extends Page {
-  /**
-   * Заголовок страницы. Не задавайте значение здесь напрямую —
-   * присваивайте его в хуке created(). Иначе реактивность не сработает.
-   */
-  title!: string;
+export default class LoginPage extends withFeatures(Page, TemplateFeature) {
 
   /**
    * Приватное реактивное свойство для демонстрации. Декоратор
@@ -39,7 +34,7 @@ export default class LoginPage extends Page {
   protected renderStructure(): HTMLElement {
     // Разметку можно описывать как строку с минимальным HTML.
     // Здесь контекст не нужен, поэтому передаём пустой объект.
-    return this.html(`
+    return this.template.html(`
       <div>
         <h1>{{ reactiveVar }} - Login</h1>
         <p>Имитация логина. Нажми кнопку — установим pseudo-token в localStorage</p>

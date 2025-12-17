@@ -11,7 +11,8 @@ export default defineConfig({
     build: { target: "ESNext" },
     resolve: {
         alias: {
-            "@icrusai/ts-router": path.resolve(__dirname, "../dist/index.js")
+            "@icrusai/ts-router": path.resolve(__dirname, "../dist/index.js"),
+            "@": path.resolve(__dirname, "../src")
         }
     }
 });

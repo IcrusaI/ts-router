@@ -47,7 +47,7 @@ export type FeatureCtor<
     Host extends Layout = Layout,
     Instance extends FeatureLifecycle<Host> = FeatureLifecycle<Host>,
     Name extends string = string
-> = (new (...args: any[]) => Instance) & {
+> = (new (...args: unknown[]) => Instance) & {
     featureName: Name;
     /**
      * Зависимости фичи. Указываются только через конструкторы фич
