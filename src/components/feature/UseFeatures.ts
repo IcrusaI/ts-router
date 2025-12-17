@@ -27,12 +27,16 @@ export type FeatureFields<Specs extends readonly FeatureSpec[]> = {
     [K in Specs[number] as FeatureNameFromSpec<K>]: FeatureInstanceFromSpec<K>;
 };
 
+type FeaturefulConstructor<
+    Ctor extends abstract new (...args: any[]) => any,
+    Specs extends readonly FeatureSpec[],
+    Instance = InstanceType<Ctor> & FeatureFields<Specs>,
+> = Ctor & { prototype: Instance } & { new (...args: ConstructorParameters<Ctor>): Instance };
+
 export type ClassWithFeatures<
     Ctor extends abstract new (...args: any[]) => any,
     Specs extends readonly FeatureSpec[]
-> = Ctor & {
-    new (...args: ConstructorParameters<Ctor>): InstanceType<Ctor> & FeatureFields<Specs>;
-};
+> = FeaturefulConstructor<Ctor, Specs>;
 
 const USE_FEATURES_KEY = Symbol.for("@@useFeaturesSpecs");
 
