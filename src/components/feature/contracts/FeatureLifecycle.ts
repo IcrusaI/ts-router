@@ -1,41 +1,33 @@
 import Layout from "@/components/Layout";
 
-/**
- * Очиститель, который может вернуть любой хук фичи.
- * Может быть синхронным или асинхронным.
- */
+/** Очиститель хука: либо ничего, либо функция (sync/async) для отписки/очистки. */
 export type HookCleanup = void | (() => void | Promise<void>);
-
-/**
- * Утилитарный тип для описания хуков, которые могут быть асинхронными.
- */
-export type MaybePromise<T> = T | Promise<T>;
 
 /**
  * Базовый контракт для фичи компонента. Каждая фича может реагировать
  * на жизненный цикл {@link Layout} и добавлять свои возможности хосту.
  */
 export interface FeatureLifecycle<Host extends Layout = Layout> {
-    onInit?(host: Host): MaybePromise<void>;
-    onFeaturesReady?(host: Host): MaybePromise<void>;
+    onInit?(host: Host): void | Promise<void>;
+    onFeaturesReady?(host: Host): void | Promise<void>;
 
-    beforeRender?(): MaybePromise<void>;
+    beforeRender?(): void | Promise<void>;
 
     afterRender?(result: unknown): unknown;
 
-    onRootCreated?(root: HTMLElement): MaybePromise<void>;
-    beforeMountRoot?(root: HTMLElement): MaybePromise<void>;
+    onRootCreated?(root: HTMLElement): void | Promise<void>;
+    beforeMountRoot?(root: HTMLElement): void | Promise<void>;
 
-    onMounted?(): MaybePromise<HookCleanup>;
-    afterMounted?(): MaybePromise<HookCleanup>;
+    onMounted?(): HookCleanup | Promise<HookCleanup>;
+    afterMounted?(): HookCleanup | Promise<HookCleanup>;
 
-    beforeUpdate?(partial?: Record<string, any>): MaybePromise<void>;
-    afterUpdate?(partial?: Record<string, any>): MaybePromise<void>;
-    onStateChanged?(partial: Record<string, any>): MaybePromise<void>;
+    beforeUpdate?(partial?: Record<string, any>): void | Promise<void>;
+    afterUpdate?(partial?: Record<string, any>): void | Promise<void>;
+    onStateChanged?(partial: Record<string, any>): void | Promise<void>;
 
-    beforeDestroy?(): MaybePromise<void>;
-    onDestroy?(): MaybePromise<HookCleanup>;
-    afterDestroy?(): MaybePromise<HookCleanup>;
+    beforeDestroy?(): void | Promise<void>;
+    onDestroy?(): HookCleanup | Promise<HookCleanup>;
+    afterDestroy?(): HookCleanup | Promise<HookCleanup>;
 }
 
 /**
