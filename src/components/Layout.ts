@@ -77,7 +77,7 @@ export default abstract class Layout {
      * Получить установленную фичу по имени или конструктору.
      * Удобно для межфичевого взаимодействия и работы с зависимостями.
      */
-    public getFeature<F extends FeatureLifecycle>(key: string | FeatureCtor<any, F>): F | undefined {
+    public getFeature<F extends FeatureLifecycle>(key: string | FeatureCtor<any, F, any>): F | undefined {
         return findFeature(this as any, key) as F | undefined;
     }
 

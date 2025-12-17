@@ -1,8 +1,10 @@
-import {Layout, SlotsFeature, UseFeatures} from "@icrusai/ts-router";
+import {Layout, SlotsFeature, withFeatures} from "@icrusai/ts-router";
 import shell from "./shell.html?raw";
 
-@UseFeatures(SlotsFeature<"header" | "sidebar" | "content">)
-export default class ShellLayout extends Layout {
+export default class ShellLayout extends withFeatures(
+    Layout,
+    SlotsFeature,
+) {
     protected renderStructure() {
         console.log(this.slots);
         return shell;

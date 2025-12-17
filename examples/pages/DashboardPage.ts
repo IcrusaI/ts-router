@@ -2,12 +2,6 @@ import { Page } from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
 
 export default class DashboardPage extends Page {
-    /**
-     * Заголовок страницы устанавливается в created(). Не присваивайте здесь,
-     * чтобы не терять реактивность.
-     */
-    public title!: string;
-
     protected created() {
         // Устанавливаем заголовок страницы в момент создания
         this.title = "Dashboard";

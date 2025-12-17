@@ -1,12 +1,12 @@
 import type { FeatureCtor, FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
 
-export type FeatureRequest = { name?: string; feature: FeatureCtor<any, any> };
-export type FeatureSpec = FeatureRequest | FeatureCtor<any, any>;
+export type FeatureRequest = { name?: string; feature: FeatureCtor<any, any, any> };
+export type FeatureSpec = FeatureRequest | FeatureCtor<any, any, any>;
 
-export type FeatureNameFromSpec<S extends FeatureSpec> = S extends FeatureCtor<any, any>
-    ? S["featureName"]
+export type FeatureNameFromSpec<S extends FeatureSpec> = S extends FeatureCtor<any, any, infer FN>
+    ? FN
     : S extends { feature: infer F }
-        ? F extends FeatureCtor<any, any>
+        ? F extends FeatureCtor<any, any, infer FN>
             ? S extends { name: infer N }
                 ? N extends string
                     ? N
@@ -29,7 +29,7 @@ export type FeatureFields<Specs extends readonly FeatureSpec[]> = {
 
 export type FeaturePlanEntry = {
     name: string;
-    ctor: FeatureCtor<any, any>;
+    ctor: FeatureCtor<any, any, any>;
     expose: boolean;
     instance?: FeatureLifecycle<any>;
 };

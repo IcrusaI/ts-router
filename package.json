@@ -51,6 +51,7 @@
     "semantic-release": "^24.2.8",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3",
-    "vite": "^7.1.12"
+    "vite": "^7.1.12",
+    "vite-tsconfig-paths": "^6.0.2"
   }
 }

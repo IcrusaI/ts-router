@@ -27,7 +27,7 @@ export function attachFeature<H extends Layout, F extends FeatureLifecycle<H>>(
     feature.onInit?.(host);
 }
 
-export function getFeature(host: Layout, key: string | FeatureCtor<any, any>) {
+export function getFeature(host: Layout, key: string | FeatureCtor<any, any, any>) {
     const bucket = FEATURE_STORE.get(host);
     if (!bucket) return;
     if (typeof key === "string") return bucket.get(key);

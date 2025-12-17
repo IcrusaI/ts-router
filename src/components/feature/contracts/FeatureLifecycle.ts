@@ -45,12 +45,13 @@ export interface FeatureLifecycle<Host extends Layout = Layout> {
  */
 export type FeatureCtor<
     Host extends Layout = Layout,
-    Instance extends FeatureLifecycle<Host> = FeatureLifecycle<Host>
+    Instance extends FeatureLifecycle<Host> = FeatureLifecycle<Host>,
+    Name extends string = string
 > = (new (...args: any[]) => Instance) & {
-    featureName: string;
+    featureName: Name;
     /**
      * Зависимости фичи. Указываются только через конструкторы фич
      * без объектов-обёрток и без кастомных имён.
      */
-    dependencies?: readonly FeatureCtor<any, any>[];
+    dependencies?: readonly FeatureCtor<any, any, any>[];
 };
