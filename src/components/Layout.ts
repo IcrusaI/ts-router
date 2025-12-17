@@ -343,24 +343,6 @@ export default abstract class Layout {
     // —— state/events ————————————————————————————————————————————————
 
     /**
-     * Частичное обновление внутреннего состояния компонента с вызовом
-     * пользовательского `update?()` (если определён).
-     *
-     * @param partial Объект с полями для слияния в текущее состояние.
-     */
-    protected readonly state: Record<string, any> = {};
-
-    public setState(partial: Record<string, any>): void {
-        void this.forEachFeature((f) => f.beforeUpdate?.(partial));
-        void this.forEachFeature((f) => f.onStateChanged?.(partial));
-
-        Object.assign(this.state, partial);
-        this.update?.();
-
-        void this.forEachFeature((f) => f.afterUpdate?.(partial));
-    }
-
-    /**
      * Безопасная подписка на DOM-событие: listener автоматически снимается
      * при {@link destroy}. Используй вместо ручного `addEventListener`,
      * чтобы избежать утечек.
