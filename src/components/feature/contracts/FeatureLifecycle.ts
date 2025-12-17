@@ -31,19 +31,16 @@ export interface FeatureLifecycle<Host extends Layout = Layout> {
 }
 
 /**
- * Конструктор фичи, который также несёт дефолтное имя поля.
- * Пример:
- *   class ChildrenFeature { static featureName = "children" }
+ * Простая сигнатура конструктора фичи. Требует только статических полей
+ * featureName и опционально dependencies — без вложенных generic’ов.
  */
-export type FeatureCtor<
+export interface FeatureCtor<
     Host extends Layout = Layout,
     Instance extends FeatureLifecycle<Host> = FeatureLifecycle<Host>,
     Name extends string = string
-> = (new (...args: unknown[]) => Instance) & {
-    featureName: Name;
-    /**
-     * Зависимости фичи. Указываются только через конструкторы фич
-     * без объектов-обёрток и без кастомных имён.
-     */
-    dependencies?: readonly FeatureCtor<any, any, any>[];
-};
+> {
+    new (...args: unknown[]): Instance;
+    readonly prototype: Instance;
+    readonly featureName: Name;
+    readonly dependencies?: readonly FeatureCtor<any, any, any>[];
+}
