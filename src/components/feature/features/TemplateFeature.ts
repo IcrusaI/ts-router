@@ -1,7 +1,7 @@
 import type { FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
 import type Layout from "@/components/Layout";
 import DisposableScope from "@/utils/disposables";
-import ChildrenFeature from "@/components/feature/ChildrenFeature";
+import ChildrenFeature from "@/components/feature/features/ChildrenFeature";
 
 /**
  * TemplateFeature — расширенный шаблонизатор для Layout.

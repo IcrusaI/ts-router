@@ -8,6 +8,6 @@ export { reactive } from "@/utils/decorators";
 
 export { withFeatures } from "@/components/feature/UseFeatures";
 
-export { default as ChildrenFeature } from "@/components/feature/ChildrenFeature";
-export { default as SlotsFeature } from "@/components/feature/SlotsFeature";
-export { default as TemplateFeature } from "@/components/feature/TemplateFeature";
+export { default as ChildrenFeature } from "@/components/feature/features/ChildrenFeature";
+export { default as SlotsFeature } from "@/components/feature/features/SlotsFeature";
+export { default as TemplateFeature } from "@/components/feature/features/TemplateFeature";

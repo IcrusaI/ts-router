@@ -52,7 +52,6 @@ export default abstract class Layout {
      */
     private readonly disposables = new DisposableScope();
 
-
     /**
      * Конструктор: синхронно вызывает опциональный хук {@link created}.
      * Плагины можно добавлять как до, так и после создания экземпляра, но до mount.
