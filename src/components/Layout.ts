@@ -1,6 +1,5 @@
 import { signal } from "@/utils/reactive";
 import DisposableScope from "@/utils/disposables";
-import {attachFeature, forEachFeature, getFeature as findFeature, notifyFeaturesReady} from "@/components/feature/featureRegistry";
 import { buildFeaturePlan, collectFeatureSpecs } from "@/components/feature/featureSpecs";
 import {FeatureCtor, FeatureLifecycle} from "@/components/feature/contracts/FeatureLifecycle";
 
@@ -45,13 +44,15 @@ export default abstract class Layout {
     private root?: HTMLElement;
 
     /** Флаг: был ли компонент смонтирован. */
-    private _mounted = false;
+    private _isMounted = false;
 
     /**
      * Общий контейнер для всех disposer-функций (DOM-события, эффекты и т.п.).
      */
     private readonly disposables = new DisposableScope();
 
+    /** Реестр подключённых фич. */
+    private readonly features = new Map<string, FeatureLifecycle<Layout>>();
     /**
      * Конструктор: синхронно вызывает опциональный хук {@link created}.
      * Плагины можно добавлять как до, так и после создания экземпляра, но до mount.
@@ -64,10 +65,10 @@ export default abstract class Layout {
         for (const { name, ctor: Fx, expose, instance } of plan) {
             const featureInstance = instance ?? new Fx();
             if (expose) (this as any)[name] = featureInstance;
-            attachFeature(this as any, name, featureInstance);
+            this.attachFeature(name, featureInstance);
         }
 
-        queueMicrotask(() => notifyFeaturesReady(this as any));
+        queueMicrotask(() => this.forEachFeature((feature) => feature.onFeaturesReady?.(this)));
 
         this.created?.();
     }
@@ -77,7 +78,26 @@ export default abstract class Layout {
      * Удобно для межфичевого взаимодействия и работы с зависимостями.
      */
     public getFeature<F extends FeatureLifecycle>(key: string | FeatureCtor<any, F, any>): F | undefined {
-        return findFeature(this as any, key) as F | undefined;
+        return this.findFeature(key) as F | undefined;
+    }
+
+    // —— feature helpers ————————————————————————————————
+    private attachFeature(name: string, feature: FeatureLifecycle<Layout>) {
+        if (this.features.has(name)) throw new Error(`Feature "${name}" already installed`);
+        this.features.set(name, feature);
+        feature.onInit?.(this);
+    }
+
+    private findFeature(key: string | FeatureCtor<any, any, any>) {
+        if (typeof key === "string") return this.features.get(key);
+        for (const f of this.features.values()) {
+            if (f instanceof key) return f;
+        }
+        return undefined;
+    }
+
+    private forEachFeature(cb: (feature: FeatureLifecycle<Layout>) => void) {
+        for (const f of this.features.values()) cb(f);
     }
 
     /**
@@ -183,17 +203,17 @@ export default abstract class Layout {
     public async mountTo(container: Element | DocumentFragment): Promise<void> {
         if (!this.root) this.ensureRoot();
 
-        const firstTime = !this._mounted;
+        const firstTime = !this._isMounted;
         if (firstTime) {
-            await forEachFeature(this, (f: any) => f.beforeMountRoot?.(this.root!));
+            await this.forEachFeature((f) => f.beforeMountRoot?.(this.root!));
             await this.beforeMount?.();
         }
 
         container.append(this.root!);
-        this._mounted = true;
+        this._isMounted = true;
 
         // onMounted
-        forEachFeature(this, (f: any) => {
+        this.forEachFeature((f) => {
             const c = f.onMounted?.();
             this.registerCleanup(c);
         });
@@ -201,7 +221,7 @@ export default abstract class Layout {
         await this.afterMount?.();
 
         // afterMounted (точно после afterMount)
-        forEachFeature(this, (f: any) => {
+        this.forEachFeature((f) => {
             const c = f.afterMounted?.();
             this.registerCleanup(c);
         });
@@ -211,19 +231,19 @@ export default abstract class Layout {
      * Полностью уничтожить компонент:
      * - `beforeUnmount?()`;
      * - `features.onDestroy?()` для всех фич;
-     * - удалить корневой DOM и сбросить флаг `_mounted`;
+     * - удалить корневой DOM и сбросить флаг `_isMounted`;
      * - `unmounted?()`;
      * - снять все DOM-подписки, оформленные через {@link addEvent}.
      *
      * Повторные вызовы безопасны (no-op, если компонент не смонтирован).
      */
     public async destroy(): Promise<void> {
-        forEachFeature(this, (f: any) => f.beforeDestroy?.());
+        this.forEachFeature((f) => f.beforeDestroy?.());
 
-        if (this._mounted && this.root) {
+        if (this._isMounted && this.root) {
             await this.beforeUnmount?.();
 
-            forEachFeature(this, (f: any) => {
+            this.forEachFeature((f) => {
                 const c = f.onDestroy?.();
                 this.registerCleanup(c);
             });
@@ -232,9 +252,9 @@ export default abstract class Layout {
             await this.disposables.flush();
 
             this.root.remove();
-            this._mounted = false;
+            this._isMounted = false;
 
-            forEachFeature(this, (f: any) => {
+            this.forEachFeature((f) => {
                 const c = f.afterDestroy?.();
                 this.registerCleanup(c);
             });
@@ -264,8 +284,8 @@ export default abstract class Layout {
      * Признак, что компонент в смонтированном состоянии.
      * Полезен в наследниках для условного поведения.
      */
-    protected get mounted(): boolean {
-        return this._mounted;
+    protected get isMounted(): boolean {
+        return this._isMounted;
     }
 
     /**
@@ -281,7 +301,7 @@ export default abstract class Layout {
      */
     private ensureRoot(): void {
         this.ensureReactiveProps();
-        forEachFeature(this, (f: any) => f.beforeRender?.());
+        this.forEachFeature((f) => f.beforeRender?.());
 
         let node: any = this.renderStructure();
 
@@ -289,7 +309,7 @@ export default abstract class Layout {
         // здесь deliberately оставляем afterRender синхронным по умолчанию.
         // Если хочешь поддержать async afterRender — нужно сделать ensureRoot async.
         // Поэтому здесь исполняем только sync-часть:
-        forEachFeature(this, (f: any) => {
+        this.forEachFeature((f) => {
             if (!f.afterRender) return;
             const out = f.afterRender(node);
             // если фича вернула Promise — это ошибка конфигурации (см. комментарий выше)
@@ -317,7 +337,7 @@ export default abstract class Layout {
             throw new Error("renderStructure() must return HTMLElement");
         }
         this.root = node;
-        forEachFeature(this, (f: any) => f.onRootCreated?.(node));
+        this.forEachFeature((f) => f.onRootCreated?.(node));
     }
 
     // —— state/events ————————————————————————————————————————————————
@@ -331,13 +351,13 @@ export default abstract class Layout {
     protected readonly state: Record<string, any> = {};
 
     public setState(partial: Record<string, any>): void {
-        void forEachFeature(this, (f: any) => f.beforeUpdate?.(partial));
-        void forEachFeature(this, (f: any) => f.onStateChanged?.(partial));
+        void this.forEachFeature((f) => f.beforeUpdate?.(partial));
+        void this.forEachFeature((f) => f.onStateChanged?.(partial));
 
         Object.assign(this.state, partial);
         this.update?.();
 
-        void forEachFeature(this, (f: any) => f.afterUpdate?.(partial));
+        void this.forEachFeature((f) => f.afterUpdate?.(partial));
     }
 
     /**
