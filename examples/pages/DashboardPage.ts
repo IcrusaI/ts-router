@@ -1,8 +1,11 @@
 import { Page } from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
 
-export default class DashboardPage extends Page<"header" | "sidebar" | "content"> {
-    title = "Dashboard";
+export default class DashboardPage extends Page {
+    protected created() {
+        // Устанавливаем заголовок страницы в момент создания
+        this.title = "Dashboard";
+    }
 
     protected renderStructure() {
         const shell = new ShellLayout();
@@ -24,7 +27,7 @@ export default class DashboardPage extends Page<"header" | "sidebar" | "content"
 
         // простая кнопка логаута
         setTimeout(() => {
-            const btn = (shell.getElement().querySelector("#logout") as HTMLButtonElement | null);
+            const btn = shell.getElement().querySelector("#logout") as HTMLButtonElement | null;
             btn?.addEventListener("click", () => {
                 localStorage.removeItem("token");
                 history.pushState({}, "", "/login?redirect=/dashboard");

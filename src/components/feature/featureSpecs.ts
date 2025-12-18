@@ -1,0 +1,93 @@
+import type Layout from "@/components/Layout";
+import type {
+    FeatureCtor,
+    FeatureLifecycle,
+} from "@/components/feature/contracts/FeatureLifecycle";
+
+export type FeatureRequest = {
+    name?: string;
+    feature: FeatureCtor<Layout, FeatureLifecycle, string>;
+};
+export type FeatureSpec = FeatureRequest | FeatureCtor<Layout, FeatureLifecycle, string>;
+
+export type FeatureNameFromSpec<S extends FeatureSpec> =
+    S extends FeatureCtor<Layout, any, infer FN>
+        ? FN
+        : S extends { feature: infer F }
+          ? F extends FeatureCtor<Layout, any, infer FN>
+              ? S extends { name: infer N }
+                  ? N extends string
+                      ? N
+                      : F["featureName"]
+                  : F["featureName"]
+              : never
+          : never;
+
+export type FeatureInstanceFromSpec<S extends FeatureSpec> =
+    // Передан конструктор напрямую
+    S extends FeatureCtor<Layout, any, any>
+        ? InstanceType<S>
+        : // Передан объект { feature: Ctor }
+          S extends { feature: infer F }
+          ? F extends FeatureCtor<Layout, any, any>
+              ? InstanceType<F>
+              : never
+          : never;
+
+export type FeatureFields<Specs extends readonly FeatureSpec[]> = {
+    [K in Specs[number] as FeatureNameFromSpec<K>]: FeatureInstanceFromSpec<K>;
+};
+
+export type FeaturePlanEntry = {
+    name: string;
+    ctor: FeatureCtor<Layout, FeatureLifecycle, string>;
+    expose: boolean;
+    instance?: FeatureLifecycle;
+};
+
+export const USE_FEATURES_KEY = Symbol.for("@@useFeaturesSpecs");
+
+export function collectFeatureSpecs(ctor: Function): FeatureSpec[] {
+    const out: FeatureSpec[] = [];
+    let cur: unknown = ctor;
+    while (typeof cur === "function" && cur !== Function.prototype) {
+        const specs = (cur as { [USE_FEATURES_KEY]?: FeatureSpec[] })[USE_FEATURES_KEY];
+        if (specs) out.push(...specs);
+        cur = Object.getPrototypeOf(cur);
+    }
+    return out;
+}
+
+function normalizeSpec(spec: FeatureSpec): {
+    request: FeatureRequest;
+    instance?: FeatureLifecycle;
+} {
+    if (typeof spec === "function") return { request: { feature: spec }, instance: undefined };
+    return { request: spec, instance: undefined };
+}
+
+function collectDependencies(
+    spec: FeatureSpec,
+    expose: boolean,
+    plan: Map<string, FeaturePlanEntry>
+): void {
+    const { request, instance } = normalizeSpec(spec);
+    const name = request.name ?? request.feature.featureName;
+    if (!name) throw new Error("Feature is missing featureName; provide name in @UseFeatures spec");
+
+    const existing = plan.get(name);
+    if (existing) {
+        if (expose) existing.expose = true;
+        return;
+    }
+
+    for (const dep of request.feature.dependencies ?? []) collectDependencies(dep, false, plan);
+
+    plan.set(name, { name, ctor: request.feature, expose, instance });
+}
+
+export function buildFeaturePlan(specs: readonly FeatureSpec[]): FeaturePlanEntry[] {
+    const plan = new Map<string, FeaturePlanEntry>();
+    for (const spec of specs) collectDependencies(spec, true, plan);
+    return [...plan.values()];
+}

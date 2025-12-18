@@ -1,84 +1,30 @@
-/* ======================================================================= *
- *  Router.ts — лёгкий SPA-router с middleware, редиректами и error-page   *
- *                                                                         *
- *  ▸ Динамические параметры ("/post/:slug")                               *
- *  ▸ Navigation guards (middlewares)                                      *
- *  ▸ Redirect-роуты                                                       *
- *  ▸ Страницы 404/ERROR                                                   *
- *  ▸ Авто-скролл + поддержка #якорей                                      *
- *  ▸ Полностью асинхронный life-cycle Page-компонентов                    *
- *  ▸ Защита от гонок навигации (navToken)                                 *
- * ======================================================================= */
-
-/**
- * @fileoverview
- * Минималистичный SPA-роутер без фреймворков. Управляет историей браузера,
- * матчингом путей, обработкой middleware, редиректами и монтированием
- * страниц на основе базового класса {@link Page}.
- *
- * Основные сущности:
- * - {@link Router} — центральный класс маршрутизации;
- * - {@link Page} — базовый класс страницы, умеет монтироваться/размонтироваться;
- * - {@link ParsedRoute} — скомпилированный маршрут (RegExp + имена параметров);
- * - {@link NavigationTarget} — “куда/откуда идём” (path/params/query/meta).
- *
- * Особенности реализации:
- * - Предотвращение гонок навигации через токен {@link Router.navToken}.
- * - Перехват кликов по `<a>` для SPA-навигации (внутренние ссылки).
- * - Нормализация путей с учётом `basePath`, очисткой лишних `/`.
- * - Авто-скролл к якорям (`#hash`) и сброс прокрутки при обычных переходах.
- *
- * @example Базовое использование
- * ```ts
- * import Router from "@/common/router/Router";
- * import NotFoundPage from "@/common/components/NotFoundPage";
- *
- * const router = new Router(document.getElementById("app")!, {
- *   basePath: "/",
- *   defaultTitle: "My App",
- * });
- *
- * // Регистрация маршрутов
- * router.register("/", () => import("@/pages/HomePage"));
- * router.register("/users/:id", () => import("@/pages/UserPage"), {
- *   middlewares: [
- *     async (to) => {
- *       // Пример проверки: id обязателен
- *       return Boolean(to.params.id);
- *     },
- *   ],
- * });
- *
- * // 404 и error-страницы
- * router.setNotFound(() => NotFoundPage);
- * router.setErrorPage(() => import("@/pages/ErrorPage"));
- *
- * // Старт
- * router.init();
- * ```
- */
-
-import Page from "@/common/components/Page";
-import ParsedRoute from "@/common/router/ParsedRoute";
-import { PageCtor, PageProvider } from "@/common/router/types";
-import RouterOptions from "@/common/router/RouterOptions";
-import RouteOptions from "@/common/router/RouteOptions";
-import NavigationTarget from "@/common/router/NavigationTarget";
-import {effect} from "@/common/utils/reactive";
+import Page from "@/components/Page";
+import {
+    ParsedRoute,
+    RouterOptions,
+    RouteOptions,
+    NavigationTarget,
+    CurrentRoute,
+    PageClass,
+    PageResolver,
+} from "@/router/types";
+import DisposableScope from "@/utils/disposables";
+import normalizeBase from "@/utils/NormalizeBase";
+import safeDecodeURI from "@/utils/SafeDecodeURI";
+import safeDecodeURIComponent from "@/utils/SafeDecodeURIComponent";
 
 /**
  * Центральный класс маршрутизации приложения.
  *
- * Выполняет:
- * 1) парсинг и хранение конфигурации маршрутов;
- * 2) сопоставление текущего `location.pathname` с зарегистрированными паттернами;
- * 3) последовательный запуск middleware-хуков для “гвардов”;
- * 4) редиректы на уровне маршрутов;
- * 5) создание/монтаж/размонтаж экземпляров страниц {@link Page};
- * 6) обновление `document.title` на основании `Page.getTitle()`;
- * 7) управление историей браузера (`pushState`/`replaceState`) и intercept `<a>`.
+ * Делает:
+ * - хранит зарегистрированные паттерны и подбирает подходящий по URL;
+ * - последовательно запускает middleware (гварды) перед монтированием страницы;
+ * - поддерживает redirect-роуты и страницы 404/ошибок;
+ * - монтирует/размонтирует экземпляры {@link Page};
+ * - синхронизирует `document.title` с реактивным полем `page.title`;
+ * - обновляет историю (`pushState`/`replaceState`) и перехватывает `<a>`.
  */
-export default class Router {
+class Router {
     /* ======================   PRIVATE FIELDS   ======================= */
 
     /**
@@ -97,50 +43,44 @@ export default class Router {
      * Ленивая фабрика для страницы 404 (“not found”).
      * @private
      */
-    private notFoundPage?: () => Promise<PageCtor>;
+    private notFoundPage?: () => Promise<PageClass>;
 
     /**
      * Ленивая фабрика для страницы ошибок (“error page”).
      * @private
      */
-    private errorPage?: () => Promise<PageCtor>;
+    private errorPage?: () => Promise<PageClass>;
 
     /**
      * DOM-контейнер, в который монтируются страницы.
      * @private
      */
-    private readonly container: Element;
+    private container!: Element;
 
     /**
      * Базовый префикс для приложения, напр. `"/app"` (по умолчанию `"/"`).
      * Используется в нормализации путей и при формировании URL в истории.
      * @private
      */
-    private readonly basePath: string;
+    private basePath!: string;
 
     /**
      * Заголовок по умолчанию, если страница не предоставила свой.
      * @private
      */
-    private readonly defaultTitle: string;
+    private defaultTitle!: string;
 
     /**
-     * Функция-диспозер (отписка) для текущего эффекта,
-     * синхронизирующего `document.title` с реактивным заголовком {@link Page.title}.
-     *
-     * Каждый раз при монтировании новой страницы (`mountPage`) создаётся новый
-     * эффект через {@link effect}, который подписывается на `page.title$()`.
-     * Когда происходит переход на другую страницу, предыдущий эффект вызывается
-     * (через `offTitleEffect()`), чтобы:
-     *  - снять все подписки с предыдущего сигнала;
-     *  - предотвратить утечки памяти;
-     *  - исключить дублирование обновлений заголовка.
-     *
-     * Значение `null` означает, что активный эффект отсутствует.
-     *
-     * @private
+     * Контейнер для реактивных эффектов текущей страницы (заголовок и пр.).
+     * Позволяет единообразно снимать эффекты перед монтированием нового Page.
      */
-    private offTitleEffect: (() => void) | null = null;
+    private readonly titleScope = new DisposableScope();
+
+    /**
+     * Контейнер для глобальных подписок на события (popstate, click и т.д.).
+     * Держит их в одном месте и упрощает возможную перерегистрацию.
+     */
+    private readonly eventScope = new DisposableScope();
 
     /**
      * Навигационный токен для защиты от гонок.
@@ -166,39 +106,43 @@ export default class Router {
      * });
      * ```
      */
-    constructor(container: Element, opts: RouterOptions = {}) {
+    public init(container: Element, opts: RouterOptions = {}): Router {
         this.container = container;
-        this.basePath = normalizeBase(opts.basePath ?? "/");
-        this.defaultTitle = opts.defaultTitle ?? "App";
+        this.configure(opts);
+
+        void this.eventScope.flush();
 
         // Переходы «назад/вперёд» в браузере
-        window.addEventListener("popstate", () => {
-            void this.navigate(
-                window.location.pathname +
-                window.location.search +
-                window.location.hash,
-                { replace: true }
-            );
+        this.eventScope.listen(window, "popstate", () => {
+            void this.navigate(this.currentLocation(), { replace: true });
         });
+
+        this.navigate(this.currentLocation(), { replace: true }).then(() => this.interceptLinks());
+
+        return this;
     }
 
     /**
-     * Инициализация роутера:
-     *  - выполняет первый рендер текущего URL;
-     *  - включает перехват кликов по внутренним ссылкам.
+     * Обновляет параметры роутера после инициализации.
      *
-     * Безопасно вызывать повторно — повторная инициализация не ломает состояние.
-     *
-     * @returns Промис, который завершится после первой отрисовки.
+     * Можно вызывать многократно, чтобы сменить basePath, defaultTitle или
+     * провайдеры notFound/error страниц.
      */
-    public async init(): Promise<void> {
-        await this.navigate(
-            window.location.pathname +
-            window.location.search +
-            window.location.hash,
-            { replace: true }
-        );
-        this.interceptLinks();
+    public configure(opts: RouterOptions): void {
+        if (opts.basePath !== undefined) {
+            this.basePath = normalizeBase(opts.basePath);
+        } else if (!this.basePath) {
+            this.basePath = "/";
+        }
+
+        if (opts.defaultTitle !== undefined) {
+            this.defaultTitle = opts.defaultTitle;
+        } else if (!this.defaultTitle) {
+            this.defaultTitle = "App";
+        }
+
+        if (opts.notFound) this.notFoundPage = this.wrapProvider(opts.notFound);
+        if (opts.errorPage) this.errorPage = this.wrapProvider(opts.errorPage);
     }
 
     /* =========================   API   ================================= */
@@ -211,7 +155,7 @@ export default class Router {
      * @param provider Провайдер страницы. Может быть:
      *  - конструктором класса, наследованного от {@link Page};
      *  - функцией `() => import("...")` с дефолтным экспортом класса страницы;
-     *  - функцией, возвращающей сам класс (`Promise<PageCtor> | PageCtor`).
+     *  - функцией, возвращающей сам класс (`Promise<PageClass> | PageClass`).
      * @param opts Опции маршрута:
      *  - `middlewares` — массив хуков-гвардов, которые выполняются последовательно
      *    до монтирования страницы; возврат `false` отменяет переход;
@@ -224,34 +168,12 @@ export default class Router {
      * });
      * ```
      */
-    public register(
-        pattern: string,
-        provider: PageProvider,
-        opts: RouteOptions = {}
-    ): void {
+    public register(pattern: string, provider: PageResolver, opts: RouteOptions = {}): void {
         this.routes.push({
             ...this.parse(pattern),
             loadPage: this.wrapProvider(provider),
             opts,
         });
-    }
-
-    /**
-     * Назначает страницу 404 (not found).
-     *
-     * @param provider Провайдер 404-страницы (синхронный класс или динамический import).
-     */
-    public setNotFound(provider: PageProvider): void {
-        this.notFoundPage = this.wrapProvider(provider);
-    }
-
-    /**
-     * Назначает страницу ошибок (error page).
-     *
-     * @param provider Провайдер error-страницы (синхронный класс или динамический import).
-     */
-    public setErrorPage(provider: PageProvider): void {
-        this.errorPage = this.wrapProvider(provider);
     }
 
     /**
@@ -280,24 +202,12 @@ export default class Router {
         to: string,
         opts: {
             replace?: boolean;
-            query?: Record<
-                string,
-                string | number | boolean | null | undefined
-            >;
+            query?: Record<string, string | number | boolean | null | undefined>;
         } = {}
     ): Promise<void> {
         const { replace = false, query } = opts;
 
-        // Собираем URL с учётом basePath
-        const url = new URL(to, window.location.origin);
-        if (query) {
-            const sp = new URLSearchParams(url.search);
-            for (const [k, v] of Object.entries(query)) {
-                if (v === null || v === undefined) sp.delete(k);
-                else sp.set(k, String(v));
-            }
-            url.search = sp.toString();
-        }
+        const url = this.buildUrl(to, query);
 
         const fullPath = url.pathname + (url.search || "") + (url.hash || "");
         const destPath = this.normalize(fullPath);
@@ -307,12 +217,18 @@ export default class Router {
         if (!match) return this.show404();
 
         const search = url.search || "";
-        const toTarget: NavigationTarget = {
+        const hash = url.hash || "";
+        const toTarget: CurrentRoute = {
             path: destPath,
             params: match.params,
             meta: match.opts,
             query: new URLSearchParams(search),
-            queryObj: Object.fromEntries(new URLSearchParams(search).entries()),
+            queryObj: Object.fromEntries(new URLSearchParams(search)),
+            pattern: match.pattern,
+            hash,
+            fullPath: destPath + search + hash,
+            href: this.withBase(destPath) + search + hash,
+            basePath: this.basePath,
         };
         const fromTarget = await this.resolveCurrentTarget();
 
@@ -327,10 +243,8 @@ export default class Router {
         }
 
         // История
-        const href =
-            this.withBase(destPath) + (url.search || "") + (url.hash || "");
-        if (replace) history.replaceState({}, "", href);
-        else history.pushState({}, "", href);
+        if (replace) history.replaceState({}, "", toTarget.href);
+        else history.pushState({}, "", toTarget.href);
 
         // Защита от гонок навигации
         const myToken = ++this.navToken;
@@ -341,6 +255,7 @@ export default class Router {
             if (myToken !== this.navToken) return;
 
             const page = new PageClass();
+            page.route = toTarget;
             await this.mountPage(page);
 
             // Скролл
@@ -359,27 +274,63 @@ export default class Router {
     /* ======================   INTERNAL HELPERS   ====================== */
 
     /**
+     * Возвращает текущий путь браузера вместе с query/hash без учёта basePath.
+     * Используется для первичной и обратной навигации (popstate).
+     */
+    private currentLocation(): string {
+        return window.location.pathname + window.location.search + window.location.hash;
+    }
+
+    /**
+     * Строит URL назначения с учётом дополнительного `query`.
+     *
+     * @param to Цель навигации (абсолютная или относительная).
+     * @param query Патч для параметров строки запроса.
+     */
+    private buildUrl(
+        to: string,
+        query?: Record<string, string | number | boolean | null | undefined>
+    ): URL {
+        const url = new URL(to, window.location.origin);
+        if (!query) return url;
+
+        const searchParams = new URLSearchParams(url.search);
+        for (const [key, value] of Object.entries(query)) {
+            if (value === null || value === undefined) searchParams.delete(key);
+            else searchParams.set(key, String(value));
+        }
+        url.search = searchParams.toString();
+        return url;
+    }
+
+    /**
      * Формирует {@link NavigationTarget} для текущего URL.
      * Используется как значение “from” в middleware.
      *
      * @returns Текущая цель навигации (path/params/meta/query).
      * @internal
      */
-    private async resolveCurrentTarget(): Promise<NavigationTarget> {
-        const path = this.normalize(
-            window.location.pathname +
-            window.location.search +
-            window.location.hash
-        );
+    private async resolveCurrentTarget(): Promise<CurrentRoute> {
+        const pathWithExtras =
+            window.location.pathname + window.location.search + window.location.hash;
+        const path = this.normalize(pathWithExtras);
         const qs = window.location.search;
+        const hash = window.location.hash;
         const m = this.match(path);
+
+        const query = new URLSearchParams(qs);
 
         return {
             path,
             params: m?.params ?? {},
             meta: m?.opts ?? {},
-            query: new URLSearchParams(qs),
-            queryObj: Object.fromEntries(new URLSearchParams(qs).entries()),
+            query,
+            queryObj: Object.fromEntries(query),
+            pattern: m?.pattern ?? path,
+            hash,
+            fullPath: path + qs + hash,
+            href: window.location.pathname + window.location.search + window.location.hash,
+            basePath: this.basePath,
         };
     }
 
@@ -419,47 +370,18 @@ export default class Router {
     }
 
     /**
-     * Корректно размонтирует предыдущую страницу и монтирует новую в контейнер,
-     * а также выполняет реактивную синхронизацию заголовка документа.
-     *
-     * ## Логика работы:
-     * 1. Если ранее был установлен эффект синхронизации заголовка —
-     *    он удаляется (чтобы избежать утечек и дублирования).
-     * 2. Текущая страница (`currentPage`), если существует, уничтожается
-     *    вызовом {@link Page.destroy}.
-     * 3. Новая страница монтируется в основной контейнер приложения
-     *    методом {@link Page.mountTo}.
-     * 4. Устанавливается реактивный эффект {@link effect}, который:
-     *    - подписывается на сигнал {@link Page.title};
-     *    - автоматически обновляет `document.title` при каждом изменении заголовка;
-     *    - сбрасывает заголовок на `defaultTitle`, если значение пустое.
-     * 5. Эффект сохраняется в `offTitleEffect`, чтобы его можно было
-     *    безопасно удалить при следующем переходе.
-     *
-     * @param page Экземпляр страницы, которую требуется смонтировать.
-     * @returns Промис, завершающийся после монтирования страницы
-     *          и установки эффекта синхронизации заголовка.
-     *
-     * @example
-     * ```ts
-     * const userPage = new UserPage();
-     * await router.mountPage(userPage);
-     * // document.title теперь всегда синхронизирован с userPage.title$()
-     * ```
-     *
-     * @internal
+     * Размонтирует предыдущую страницу, монтирует новую
+     * и подписывает `document.title` на `page.title`.
      */
     private async mountPage(page: Page): Promise<void> {
-        if (this.offTitleEffect) { this.offTitleEffect(); this.offTitleEffect = null; }
+        await this.titleScope.flush();
         await this.currentPage?.destroy();
 
         await page.mountTo(this.container);
         this.currentPage = page;
 
-        document.title = page.title || this.defaultTitle;
-
-        this.offTitleEffect = page.watchTitle((t) => {
-            document.title = t || this.defaultTitle;
+        this.titleScope.effect(() => {
+            document.title = page.title || this.defaultTitle;
         });
     }
 
@@ -510,10 +432,7 @@ export default class Router {
      */
     private withBase(path: string): string {
         if (this.basePath === "/") return path;
-        return (
-            this.basePath.replace(/\/$/, "") +
-            (path.startsWith("/") ? path : "/" + path)
-        );
+        return this.basePath.replace(/\/$/, "") + (path.startsWith("/") ? path : "/" + path);
     }
 
     /**
@@ -523,16 +442,12 @@ export default class Router {
      * @returns Скомбинированный объект маршрута + `params` или `null`, если нет совпадения.
      * @internal
      */
-    private match(
-        urlPath: string
-    ): (ParsedRoute & { params: Record<string, string> }) | null {
+    private match(urlPath: string): (ParsedRoute & { params: Record<string, string> }) | null {
         for (const r of this.routes) {
             const m = urlPath.match(r.regex);
             if (!m) continue;
             const params: Record<string, string> = {};
-            r.paramNames.forEach(
-                (n, i) => (params[n] = safeDecodeURIComponent(m[i + 1] ?? ""))
-            );
+            r.paramNames.forEach((n, i) => (params[n] = safeDecodeURIComponent(m[i + 1] ?? "")));
             return { ...r, params };
         }
         return null;
@@ -543,18 +458,18 @@ export default class Router {
      * Поддерживает как синхронный класс, так и динамический import.
      *
      * @param p Провайдер страницы: класс или функция, возвращающая класс/модуль.
-     * @returns Фабрика `() => Promise<PageCtor>`.
+     * @returns Фабрика `() => Promise<PageClass>`.
      * @internal
      */
-    private wrapProvider(p: PageProvider): () => Promise<PageCtor> {
+    private wrapProvider(p: PageResolver): () => Promise<PageClass> {
         // Синхронный класс (имеет prototype.mountTo)
         if (typeof p === "function" && (p as any).prototype?.mountTo) {
-            return () => Promise.resolve(p as PageCtor);
+            return () => Promise.resolve(p as PageClass);
         }
         // Динамический import
         return async () => {
             const mod = await (p as () => Promise<any>)();
-            return ("default" in mod ? mod.default : mod) as PageCtor;
+            return ("default" in mod ? mod.default : mod) as PageClass;
         };
     }
 
@@ -572,8 +487,7 @@ export default class Router {
         const raw = this.normalize(pattern);
         const segments = raw.split("/").filter(Boolean);
 
-        if (segments.length === 0)
-            return { pattern: "/", regex: /^\/?$/, paramNames: [] };
+        if (segments.length === 0) return { pattern: "/", regex: /^\/?$/, paramNames: [] };
 
         const paramNames: string[] = [];
         const regex =
@@ -601,14 +515,18 @@ export default class Router {
      * @internal
      */
     private interceptLinks(): void {
-        document.addEventListener("click", (e) => {
+        this.eventScope.listen(document, "click", (e) => {
             // Только обычный левый клик без модификаторов
             const me = e as MouseEvent;
             if (
                 e.defaultPrevented ||
                 me.button !== 0 ||
-                me.metaKey || me.ctrlKey || me.shiftKey || me.altKey
-            ) return;
+                me.metaKey ||
+                me.ctrlKey ||
+                me.shiftKey ||
+                me.altKey
+            )
+                return;
 
             // Поднимаемся к <a>
             let el = e.target as HTMLElement | null;
@@ -631,7 +549,9 @@ export default class Router {
                 if (url.origin !== window.location.origin) return;
 
                 // 3) если путь тот же, но меняется только hash — тоже не трогаем
-                const samePath = url.pathname === window.location.pathname && url.search === window.location.search;
+                const samePath =
+                    url.pathname === window.location.pathname &&
+                    url.search === window.location.search;
                 if (samePath && url.hash) return;
 
                 // 4) ./relative и ../relative — считаем внутренними, но считаем итоговый pathname честно
@@ -648,50 +568,4 @@ export default class Router {
     }
 }
 
-/* ==========================  helpers  ============================== */
-
-/**
- * Нормализует `basePath`:
- *  - гарантирует ведущий `/`;
- *  - удаляет хвостовые `/`;
- *  - пустое значение приводит к `"/"`.
- *
- * @param base Пользовательский базовый путь.
- * @returns Нормализованный базовый путь.
- */
-function normalizeBase(base: string): string {
-    if (!base) return "/";
-    if (base === "/") return "/";
-    let b = base;
-    if (!b.startsWith("/")) b = "/" + b;
-    b = b.replace(/\/+$/, "");
-    return b || "/";
-}
-
-/**
- * Безопасный `decodeURI` (не бросает исключение при невалидной строке).
- *
- * @param v Строка для декодирования.
- * @returns Декодированное значение либо исходную строку при ошибке.
- */
-function safeDecodeURI(v: string): string {
-    try {
-        return decodeURI(v);
-    } catch {
-        return v;
-    }
-}
-
-/**
- * Безопасный `decodeURIComponent` (не бросает исключение при невалидной строке).
- *
- * @param v Строка для декодирования.
- * @returns Декодированное значение либо исходную строку при ошибке.
- */
-function safeDecodeURIComponent(v: string): string {
-    try {
-        return decodeURIComponent(v);
-    } catch {
-        return v;
-    }
-}
+export default new Router();

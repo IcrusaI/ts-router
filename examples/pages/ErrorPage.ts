@@ -1,7 +1,9 @@
 import { Page } from "@icrusai/ts-router";
 
 export default class ErrorPage extends Page {
-    title = "Error";
+    protected created() {
+        this.title = "Error";
+    }
 
     protected renderStructure(): HTMLElement {
         const el = document.createElement("div");

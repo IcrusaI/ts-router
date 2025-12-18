@@ -3,9 +3,10 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
+
     "declaration": true,
-    "emitDeclarationOnly": true,
     "declarationMap": false,
+    "emitDeclarationOnly": true,
 
     "baseUrl": ".",
     "paths": {
