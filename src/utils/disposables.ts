@@ -1,4 +1,4 @@
-import {effect, EffectDisposer} from "@/utils/reactive";
+import { effect, EffectDisposer } from "@/utils/reactive";
 
 /**
  * Универсальный контейнер для «очистителей» (disposer-функций).
@@ -46,7 +46,7 @@ export class DisposableScope {
         target: EventTarget,
         type: string,
         handler: EventListenerOrEventListenerObject,
-        options?: boolean | AddEventListenerOptions,
+        options?: boolean | AddEventListenerOptions
     ): void {
         target.addEventListener(type, handler, options);
         this.add(() => target.removeEventListener(type, handler, options));

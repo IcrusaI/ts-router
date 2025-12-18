@@ -1,10 +1,10 @@
 {
-  "extends": "../tsconfig.json",
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@icrusai/ts-router": ["../dist/index.d.ts"]
-    }
-  },
-  "include": ["./**/*.ts", "./**/*.tsx"]
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@icrusai/ts-router": ["../dist/index.d.ts"]
+        }
+    },
+    "include": ["./**/*.ts", "./**/*.tsx"]
 }

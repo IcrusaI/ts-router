@@ -30,7 +30,7 @@ a.set(5); // лог: 7
 import { reactive } from "@icrusai/ts-router";
 
 class Counter {
-  @reactive count = 0;
+    @reactive count = 0;
 }
 ```
 

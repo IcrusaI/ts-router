@@ -13,8 +13,8 @@
  * @typeParam T Тип хранимого значения.
  */
 export interface ReadWriteSignal<T> {
-    (): T;                    // чтение
-    set(value: T): void;      // запись
+    (): T; // чтение
+    set(value: T): void; // запись
     readonly __isSignal: true; // маркер для type-guard'а
 }
 
@@ -200,5 +200,5 @@ export function computed<T>(calc: () => T): ReadWriteSignal<T> {
  * @returns true, если значение — ReadWriteSignal.
  */
 export function isSignal<T = unknown>(value: unknown): value is ReadWriteSignal<T> {
-    return typeof value === 'function' && (value as any).__isSignal === true;
+    return typeof value === "function" && (value as any).__isSignal === true;
 }

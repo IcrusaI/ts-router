@@ -18,7 +18,9 @@ const app = document.getElementById("app")!;
 // Routes
 Router.register("/", () => import("./pages/HomePage"));
 Router.register("/users/:id", () => import("./pages/UserPage"));
-Router.register("/dashboard", () => import("./pages/DashboardPage"), { middlewares: [requireAuth] });
+Router.register("/dashboard", () => import("./pages/DashboardPage"), {
+    middlewares: [requireAuth],
+});
 Router.register("/login", () => import("./pages/LoginPage"));
 
 // Redirect demo

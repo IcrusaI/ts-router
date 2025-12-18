@@ -1,4 +1,4 @@
-import {isLayout} from "@/components/Layout";
+import { isLayout } from "@/components/Layout";
 import Layout from "@/components/Layout";
 import ChildrenFeature from "@/components/feature/features/ChildrenFeature";
 import { FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
@@ -154,12 +154,12 @@ export default class SlotsFeature<TSlots extends string = never> implements Feat
         if (!tpl) throw new Error(`Slot "${name}" not found`);
 
         let before = this.findMarker(name, "start");
-        let after  = this.findMarker(name, "end");
+        let after = this.findMarker(name, "end");
 
         if (!before || !after) {
             // создаём маркеры и заменяем ими живой <template>
             before = document.createComment(`slot:${name}-start`);
-            after  = document.createComment(`slot:${name}-end`);
+            after = document.createComment(`slot:${name}-end`);
 
             tpl.replaceWith(before, after);
 

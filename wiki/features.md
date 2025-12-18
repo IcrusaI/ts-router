@@ -7,10 +7,10 @@
 - Имя: `"children"`.
 - Позволяет `renderStructure()` возвращать `Layout`, обеспечивает каскадный `destroy`.
 - Методы:
-  - `attach(child, host)` — смонтировать ребёнка в контейнер.
-  - `detach(child)` — удалить и уничтожить ребёнка.
-  - `register(child)` — только учесть для каскадного destroy.
-  - `compose(child, opts?)` — вернуть host‑элемент под ребёнка.
+    - `attach(child, host)` — смонтировать ребёнка в контейнер.
+    - `detach(child)` — удалить и уничтожить ребёнка.
+    - `register(child)` — только учесть для каскадного destroy.
+    - `compose(child, opts?)` — вернуть host‑элемент под ребёнка.
 
 Пример:
 
@@ -18,10 +18,10 @@
 import { Layout, withFeatures, ChildrenFeature } from "@icrusai/ts-router";
 
 class Parent extends withFeatures(Layout, ChildrenFeature) {
-  protected renderStructure() {
-    const child = new SomeChildLayout();
-    return this.children.compose(child, { tag: "section" });
-  }
+    protected renderStructure() {
+        const child = new SomeChildLayout();
+        return this.children.compose(child, { tag: "section" });
+    }
 }
 ```
 
@@ -34,14 +34,14 @@ class Parent extends withFeatures(Layout, ChildrenFeature) {
 Пример:
 
 ```ts
-class Shell extends withFeatures(Layout, SlotsFeature<"header"|"content">) {
-  protected renderStructure() {
-    return `
+class Shell extends withFeatures(Layout, SlotsFeature<"header" | "content">) {
+    protected renderStructure() {
+        return `
       <div>
         <header><template slot="header"></template></header>
         <main><template slot="content"></template></main>
       </div>`;
-  }
+    }
 }
 
 // usage
@@ -54,26 +54,28 @@ await shell.slots.setSlot("header", "<h1>Hello</h1>");
 - Компилирует HTML‑строку с `{{ expr }}` в DOM, создаёт реактивные бинды.
 - Понимает `<layout type="CtorName">` и передаёт слоты через `<template slot>`.
 - API:
-  - `html(tpl, components?)` — возвращает HTMLElement (требует один корень).
-  - `compileFragment(tpl, components?)` — DocumentFragment с любым числом корней.
+    - `html(tpl, components?)` — возвращает HTMLElement (требует один корень).
+    - `compileFragment(tpl, components?)` — DocumentFragment с любым числом корней.
 
 Пример:
 
 ```ts
 class LoginPage extends withFeatures(Page, TemplateFeature) {
-  @reactive counter = 0;
+    @reactive counter = 0;
 
-  protected renderStructure() {
-    return this.template.html(`
+    protected renderStructure() {
+        return this.template.html(`
       <div>
         <h1>Clicks: {{ counter }}</h1>
         <button id="btn">Add</button>
       </div>
     `);
-  }
+    }
 
-  afterMount() {
-    this.getElement().querySelector("#btn")?.addEventListener("click", () => this.counter++);
-  }
+    afterMount() {
+        this.getElement()
+            .querySelector("#btn")
+            ?.addEventListener("click", () => this.counter++);
+    }
 }
 ```

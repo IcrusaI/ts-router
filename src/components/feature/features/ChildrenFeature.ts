@@ -130,7 +130,10 @@ export default class ChildrenFeature implements FeatureLifecycle<Layout> {
      *
      * Это fallback-API, если ты решишь НЕ расширять тип renderStructure.
      */
-    compose(child: Layout, opts?: { tag?: keyof HTMLElementTagNameMap; datasetKey?: string }): HTMLElement {
+    compose(
+        child: Layout,
+        opts?: { tag?: keyof HTMLElementTagNameMap; datasetKey?: string }
+    ): HTMLElement {
         const hostEl = document.createElement(opts?.tag ?? "div");
         hostEl.dataset[opts?.datasetKey ?? "layoutHost"] = "";
 

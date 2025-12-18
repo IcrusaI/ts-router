@@ -55,20 +55,20 @@ class Router {
      * DOM-контейнер, в который монтируются страницы.
      * @private
      */
-    private  container!: Element;
+    private container!: Element;
 
     /**
      * Базовый префикс для приложения, напр. `"/app"` (по умолчанию `"/"`).
      * Используется в нормализации путей и при формировании URL в истории.
      * @private
      */
-    private  basePath!: string;
+    private basePath!: string;
 
     /**
      * Заголовок по умолчанию, если страница не предоставила свой.
      * @private
      */
-    private  defaultTitle!: string;
+    private defaultTitle!: string;
 
     /**
      * Контейнер для реактивных эффектов текущей страницы (заголовок и пр.).
@@ -117,8 +117,7 @@ class Router {
             void this.navigate(this.currentLocation(), { replace: true });
         });
 
-        this.navigate(this.currentLocation(), { replace: true })
-            .then(() => this.interceptLinks())
+        this.navigate(this.currentLocation(), { replace: true }).then(() => this.interceptLinks());
 
         return this;
     }
@@ -169,11 +168,7 @@ class Router {
      * });
      * ```
      */
-    public register(
-        pattern: string,
-        provider: PageResolver,
-        opts: RouteOptions = {}
-    ): void {
+    public register(pattern: string, provider: PageResolver, opts: RouteOptions = {}): void {
         this.routes.push({
             ...this.parse(pattern),
             loadPage: this.wrapProvider(provider),
@@ -207,10 +202,7 @@ class Router {
         to: string,
         opts: {
             replace?: boolean;
-            query?: Record<
-                string,
-                string | number | boolean | null | undefined
-            >;
+            query?: Record<string, string | number | boolean | null | undefined>;
         } = {}
     ): Promise<void> {
         const { replace = false, query } = opts;
@@ -297,7 +289,7 @@ class Router {
      */
     private buildUrl(
         to: string,
-        query?: Record<string, string | number | boolean | null | undefined>,
+        query?: Record<string, string | number | boolean | null | undefined>
     ): URL {
         const url = new URL(to, window.location.origin);
         if (!query) return url;
@@ -319,7 +311,8 @@ class Router {
      * @internal
      */
     private async resolveCurrentTarget(): Promise<CurrentRoute> {
-        const pathWithExtras = window.location.pathname + window.location.search + window.location.hash;
+        const pathWithExtras =
+            window.location.pathname + window.location.search + window.location.hash;
         const path = this.normalize(pathWithExtras);
         const qs = window.location.search;
         const hash = window.location.hash;
@@ -439,10 +432,7 @@ class Router {
      */
     private withBase(path: string): string {
         if (this.basePath === "/") return path;
-        return (
-            this.basePath.replace(/\/$/, "") +
-            (path.startsWith("/") ? path : "/" + path)
-        );
+        return this.basePath.replace(/\/$/, "") + (path.startsWith("/") ? path : "/" + path);
     }
 
     /**
@@ -452,16 +442,12 @@ class Router {
      * @returns Скомбинированный объект маршрута + `params` или `null`, если нет совпадения.
      * @internal
      */
-    private match(
-        urlPath: string
-    ): (ParsedRoute & { params: Record<string, string> }) | null {
+    private match(urlPath: string): (ParsedRoute & { params: Record<string, string> }) | null {
         for (const r of this.routes) {
             const m = urlPath.match(r.regex);
             if (!m) continue;
             const params: Record<string, string> = {};
-            r.paramNames.forEach(
-                (n, i) => (params[n] = safeDecodeURIComponent(m[i + 1] ?? ""))
-            );
+            r.paramNames.forEach((n, i) => (params[n] = safeDecodeURIComponent(m[i + 1] ?? "")));
             return { ...r, params };
         }
         return null;
@@ -501,8 +487,7 @@ class Router {
         const raw = this.normalize(pattern);
         const segments = raw.split("/").filter(Boolean);
 
-        if (segments.length === 0)
-            return { pattern: "/", regex: /^\/?$/, paramNames: [] };
+        if (segments.length === 0) return { pattern: "/", regex: /^\/?$/, paramNames: [] };
 
         const paramNames: string[] = [];
         const regex =
@@ -536,8 +521,12 @@ class Router {
             if (
                 e.defaultPrevented ||
                 me.button !== 0 ||
-                me.metaKey || me.ctrlKey || me.shiftKey || me.altKey
-            ) return;
+                me.metaKey ||
+                me.ctrlKey ||
+                me.shiftKey ||
+                me.altKey
+            )
+                return;
 
             // Поднимаемся к <a>
             let el = e.target as HTMLElement | null;
@@ -560,7 +549,9 @@ class Router {
                 if (url.origin !== window.location.origin) return;
 
                 // 3) если путь тот же, но меняется только hash — тоже не трогаем
-                const samePath = url.pathname === window.location.pathname && url.search === window.location.search;
+                const samePath =
+                    url.pathname === window.location.pathname &&
+                    url.search === window.location.search;
                 if (samePath && url.hash) return;
 
                 // 4) ./relative и ../relative — считаем внутренними, но считаем итоговый pathname честно

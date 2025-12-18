@@ -1,31 +1,38 @@
 import type Layout from "@/components/Layout";
-import type { FeatureCtor, FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
+import type {
+    FeatureCtor,
+    FeatureLifecycle,
+} from "@/components/feature/contracts/FeatureLifecycle";
 
-export type FeatureRequest = { name?: string; feature: FeatureCtor<Layout, FeatureLifecycle, string> };
+export type FeatureRequest = {
+    name?: string;
+    feature: FeatureCtor<Layout, FeatureLifecycle, string>;
+};
 export type FeatureSpec = FeatureRequest | FeatureCtor<Layout, FeatureLifecycle, string>;
 
-export type FeatureNameFromSpec<S extends FeatureSpec> = S extends FeatureCtor<Layout, any, infer FN>
-    ? FN
-    : S extends { feature: infer F }
-        ? F extends FeatureCtor<Layout, any, infer FN>
-            ? S extends { name: infer N }
-                ? N extends string
-                    ? N
-                    : F["featureName"]
-                : F["featureName"]
-            : never
-        : never;
+export type FeatureNameFromSpec<S extends FeatureSpec> =
+    S extends FeatureCtor<Layout, any, infer FN>
+        ? FN
+        : S extends { feature: infer F }
+          ? F extends FeatureCtor<Layout, any, infer FN>
+              ? S extends { name: infer N }
+                  ? N extends string
+                      ? N
+                      : F["featureName"]
+                  : F["featureName"]
+              : never
+          : never;
 
 export type FeatureInstanceFromSpec<S extends FeatureSpec> =
     // Передан конструктор напрямую
     S extends FeatureCtor<Layout, any, any>
         ? InstanceType<S>
-        // Передан объект { feature: Ctor }
-        : S extends { feature: infer F }
-            ? F extends FeatureCtor<Layout, any, any>
-                ? InstanceType<F>
-                : never
-            : never;
+        : // Передан объект { feature: Ctor }
+          S extends { feature: infer F }
+          ? F extends FeatureCtor<Layout, any, any>
+              ? InstanceType<F>
+              : never
+          : never;
 
 export type FeatureFields<Specs extends readonly FeatureSpec[]> = {
     [K in Specs[number] as FeatureNameFromSpec<K>]: FeatureInstanceFromSpec<K>;
@@ -51,7 +58,10 @@ export function collectFeatureSpecs(ctor: Function): FeatureSpec[] {
     return out;
 }
 
-function normalizeSpec(spec: FeatureSpec): { request: FeatureRequest; instance?: FeatureLifecycle } {
+function normalizeSpec(spec: FeatureSpec): {
+    request: FeatureRequest;
+    instance?: FeatureLifecycle;
+} {
     if (typeof spec === "function") return { request: { feature: spec }, instance: undefined };
     return { request: spec, instance: undefined };
 }
@@ -59,7 +69,7 @@ function normalizeSpec(spec: FeatureSpec): { request: FeatureRequest; instance?:
 function collectDependencies(
     spec: FeatureSpec,
     expose: boolean,
-    plan: Map<string, FeaturePlanEntry>,
+    plan: Map<string, FeaturePlanEntry>
 ): void {
     const { request, instance } = normalizeSpec(spec);
     const name = request.name ?? request.feature.featureName;

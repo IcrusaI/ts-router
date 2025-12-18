@@ -37,7 +37,7 @@ export interface FeatureLifecycle<Host extends Layout = Layout> {
 export interface FeatureCtor<
     Host extends Layout = Layout,
     Instance extends FeatureLifecycle<Host> = FeatureLifecycle<Host>,
-    Name extends string = string
+    Name extends string = string,
 > {
     new (...args: unknown[]): Instance;
     readonly prototype: Instance;

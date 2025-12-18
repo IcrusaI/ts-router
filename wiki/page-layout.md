@@ -11,15 +11,15 @@
 import Page from "@icrusai/ts-router/dist/components/Page";
 
 export default class UserPage extends Page {
-  created() {
-    this.title = `User ${this.route.params.id}`;
-  }
+    created() {
+        this.title = `User ${this.route.params.id}`;
+    }
 
-  protected renderStructure() {
-    const el = document.createElement("section");
-    el.innerHTML = `<h1>User ${this.route.params.id}</h1>`;
-    return el;
-  }
+    protected renderStructure() {
+        const el = document.createElement("section");
+        el.innerHTML = `<h1>User ${this.route.params.id}</h1>`;
+        return el;
+    }
 }
 ```
 
@@ -41,11 +41,11 @@ export default class UserPage extends Page {
 import Layout from "@icrusai/ts-router/dist/components/Layout";
 
 export default class CardLayout extends Layout {
-  protected renderStructure() {
-    const card = document.createElement("article");
-    card.className = "card";
-    card.innerHTML = `<header><slot name="title"></slot></header><div class="body"></div>`;
-    return card;
-  }
+    protected renderStructure() {
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `<header><slot name="title"></slot></header><div class="body"></div>`;
+        return card;
+    }
 }
 ```

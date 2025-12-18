@@ -4,10 +4,10 @@
 
 ```ts
 Router.init(container, {
-  basePath: "/app",        // префикс в URL
-  defaultTitle: "My App",  // fallback для вкладки
-  notFound: () => import("./NotFoundPage"), // необязательно
-  errorPage: () => import("./ErrorPage"),   // необязательно
+    basePath: "/app", // префикс в URL
+    defaultTitle: "My App", // fallback для вкладки
+    notFound: () => import("./NotFoundPage"), // необязательно
+    errorPage: () => import("./ErrorPage"), // необязательно
 });
 ```
 
@@ -21,26 +21,26 @@ Router.init(container, {
 
 ```ts
 Router.register("/users/:id", () => import("./pages/UserPage"), {
-  middlewares: [requireAuth],
+    middlewares: [requireAuth],
 });
 
 Router.register("/legacy", () => import("./pages/Home"), {
-  redirectTo: "/",
+    redirectTo: "/",
 });
 ```
 
 - `pattern` — поддерживает `:params`.
 - `provider` — класс или `() => import()`.
 - `RouteOptions`:
-  - `middlewares?: NavigationGuard[]`
-  - `redirectTo?: string`
+    - `middlewares?: NavigationGuard[]`
+    - `redirectTo?: string`
 
 ## Программная навигация
 
 ```ts
 await Router.navigate("/users/42", {
-  replace: false,
-  query: { tab: "posts", draft: null }, // null/undefined удаляют ключ
+    replace: false,
+    query: { tab: "posts", draft: null }, // null/undefined удаляют ключ
 });
 ```
 
@@ -50,11 +50,11 @@ await Router.navigate("/users/42", {
 
 ```ts
 const requireAuth: NavigationGuard = async (to, from) => {
-  if (!localStorage.getItem("token")) {
-    await Router.navigate("/login", { replace: true, query: { redirect: to.fullPath } });
-    return false;
-  }
-  return true;
+    if (!localStorage.getItem("token")) {
+        await Router.navigate("/login", { replace: true, query: { redirect: to.fullPath } });
+        return false;
+    }
+    return true;
 };
 ```
 

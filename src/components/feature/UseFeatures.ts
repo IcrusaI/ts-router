@@ -1,13 +1,20 @@
 import type Layout from "@/components/Layout";
-import { collectFeatureSpecs, type FeatureFields, type FeatureSpec, USE_FEATURES_KEY } from "@/components/feature/featureSpecs";
+import {
+    collectFeatureSpecs,
+    type FeatureFields,
+    type FeatureSpec,
+    USE_FEATURES_KEY,
+} from "@/components/feature/featureSpecs";
 
-type AnyCtor<TInstance = unknown, TArgs extends any[] = any[]> = abstract new (...args: TArgs) => TInstance;
+type AnyCtor<TInstance = unknown, TArgs extends any[] = any[]> = abstract new (
+    ...args: TArgs
+) => TInstance;
 
 /** Конструктор, дополненный полями фич (инстанс + сохраняет статическую часть базового класса). */
-export type ClassWithFeatures<
-    Ctor extends AnyCtor,
-    Specs extends readonly FeatureSpec[]
-> = AnyCtor<InstanceType<Ctor> & FeatureFields<Specs>, ConstructorParameters<Ctor>>;
+export type ClassWithFeatures<Ctor extends AnyCtor, Specs extends readonly FeatureSpec[]> = AnyCtor<
+    InstanceType<Ctor> & FeatureFields<Specs>,
+    ConstructorParameters<Ctor>
+>;
 
 /**
  * Миксин для подключения фич без декораторов.
@@ -17,13 +24,15 @@ export type ClassWithFeatures<
  * Пример:
  *   class MyLayout extends withFeatures(Layout, ChildrenFeature) {}
  */
-export function withFeatures<const Specs extends readonly FeatureSpec[], const Base extends AnyCtor<Layout>>(
-    Base: Base,
-    ...specs: Specs
-): ClassWithFeatures<Base, Specs> {
+export function withFeatures<
+    const Specs extends readonly FeatureSpec[],
+    const Base extends AnyCtor<Layout>,
+>(Base: Base, ...specs: Specs): ClassWithFeatures<Base, Specs> {
     const inherited = collectFeatureSpecs(Base);
     abstract class Featureful extends Base {
-        constructor(...args: any[]) { super(...args as any); }
+        constructor(...args: any[]) {
+            super(...(args as any));
+        }
     }
     (Featureful as unknown as Record<typeof USE_FEATURES_KEY, FeatureSpec[]>)[USE_FEATURES_KEY] = [
         ...inherited,

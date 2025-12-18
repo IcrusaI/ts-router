@@ -27,7 +27,7 @@ export default class DashboardPage extends Page {
 
         // простая кнопка логаута
         setTimeout(() => {
-            const btn = (shell.getElement().querySelector("#logout") as HTMLButtonElement | null);
+            const btn = shell.getElement().querySelector("#logout") as HTMLButtonElement | null;
             btn?.addEventListener("click", () => {
                 localStorage.removeItem("token");
                 history.pushState({}, "", "/login?redirect=/dashboard");

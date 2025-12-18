@@ -1,9 +1,8 @@
-import {ChildrenFeature, Page, withFeatures} from "@icrusai/ts-router";
+import { ChildrenFeature, Page, withFeatures } from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
 
 export default class HomePage extends withFeatures(Page, ChildrenFeature) {
-
-/*
+    /*
     protected renderStructure() {
         return this.html(`
           <layout type="ShellLayout">
@@ -31,13 +30,13 @@ export default class HomePage extends withFeatures(Page, ChildrenFeature) {
         return new ShellLayout();
     }
 
-/*    // значение для {{ queryString }}
+    /*    // значение для {{ queryString }}
     get queryString(): string {
         return window.location.search || "—";
     }*/
 
     // private interval?: NodeJS.Timeout;
-/*
+    /*
     created() {
         // Устанавливаем исходное значение заголовка
         this.title = "Home";
@@ -51,7 +50,7 @@ export default class HomePage extends withFeatures(Page, ChildrenFeature) {
         }, 700);
     }*/
 
-/*    beforeUnmount() {
+    /*    beforeUnmount() {
         clearInterval(this.interval)
     }*/
 }

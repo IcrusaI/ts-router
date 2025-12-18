@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
-import {reactive} from "@/utils/decorators";
-import type {CurrentRoute} from "@/router/types";
+import { reactive } from "@/utils/decorators";
+import type { CurrentRoute } from "@/router/types";
 
 /**
  * Базовый класс страницы поверх {@link Layout}.
@@ -17,7 +17,7 @@ import type {CurrentRoute} from "@/router/types";
  */
 export default abstract class Page extends Layout {
     @reactive
-    public title: string = '';
+    public title: string = "";
 
     /**
      * Подробности о совпавшем маршруте.

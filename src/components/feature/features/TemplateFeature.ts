@@ -11,12 +11,6 @@ import ChildrenFeature from "@/components/feature/features/ChildrenFeature";
  * - Поддержка вложенных layout’ов через теги `<layout type="...">`;
  * - Передача слотов дочернему layout: `<template slot="name">...</template>`;
  * - Рендеринг содержимого слотов через шаблонизатор родителя.
- *
- * Для подключения используй декоратор {@link UseFeatures}:
- * ```ts
- * @UseFeatures({ feature: TemplateFeature })
- * class MyLayout extends Layout {}
- * ```
  */
 export default class TemplateFeature implements FeatureLifecycle {
     static readonly featureName = "template";
@@ -61,7 +55,7 @@ export default class TemplateFeature implements FeatureLifecycle {
         if (!rootEl || fragment.childElementCount !== 1) {
             throw new Error(
                 "TemplateFeature.html(): template must contain exactly one root element. " +
-                "Wrap multiple roots in a container element or use compileFragment()",
+                    "Wrap multiple roots in a container element or use compileFragment()"
             );
         }
         return rootEl as HTMLElement;
@@ -98,7 +92,7 @@ export default class TemplateFeature implements FeatureLifecycle {
         // 4) Для каждого бинда создаём эффект, обновляющий текст по изменению
         for (const { id, expr } of binds) {
             const placeholders = fragment.querySelectorAll(`[data-bind="${id}"]`);
-            placeholders.forEach(node => {
+            placeholders.forEach((node) => {
                 const el = node as HTMLElement;
                 const dispose = this.disposables.effect(() => {
                     let value: any = this.host as any;
@@ -142,7 +136,7 @@ export default class TemplateFeature implements FeatureLifecycle {
         }
 
         // 2) Находим все вложенные layout-теги
-        root.querySelectorAll("layout[type]").forEach(elem => {
+        root.querySelectorAll("layout[type]").forEach((elem) => {
             if (elem instanceof HTMLElement) items.push(elem);
         });
 
@@ -177,7 +171,7 @@ export default class TemplateFeature implements FeatureLifecycle {
 
             // 3b) Обрабатываем оставшиеся дочерние узлы как содержимое default слота
             const remaining: ChildNode[] = [];
-            node.childNodes.forEach(ch => {
+            node.childNodes.forEach((ch) => {
                 if (ch instanceof HTMLTemplateElement) return; // template уже обработаны
                 remaining.push(ch);
             });
@@ -191,7 +185,7 @@ export default class TemplateFeature implements FeatureLifecycle {
                     }
                 }
                 // Очищаем оригинальных детей перед передачей во фрагмент
-                remaining.forEach(ch => ch.remove());
+                remaining.forEach((ch) => ch.remove());
                 const defFrag = this.compileFragment(htmlStr, components);
                 const slots: any = (child as any).slots;
                 if (slots && typeof slots.setSlot === "function") {

@@ -10,10 +10,7 @@ export type PageClass = new (...args: any[]) => Page;
 export type PageResolver = (() => Promise<{ default: PageClass } | PageClass>) | PageClass;
 
 /** Middleware-перехватчик навигации, вызывается перед каждым переходом. */
-export type NavigationGuard = (
-    to: CurrentRoute,
-    from: CurrentRoute,
-) => boolean | Promise<boolean>;
+export type NavigationGuard = (to: CurrentRoute, from: CurrentRoute) => boolean | Promise<boolean>;
 
 /** Тонкие настройки маршрута. */
 export interface RouteOptions {

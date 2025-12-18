@@ -1,8 +1,6 @@
-import { signal } from "@/utils/reactive";
 import DisposableScope from "@/utils/disposables";
 import { buildFeaturePlan, collectFeatureSpecs } from "@/components/feature/featureSpecs";
-import {FeatureCtor, FeatureLifecycle} from "@/components/feature/contracts/FeatureLifecycle";
-
+import { FeatureCtor, FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
 
 /**
  * Тип возвращаемого значения для асинхронных хуков жизненного цикла.
@@ -57,7 +55,9 @@ export default abstract class Layout {
      * Получить установленную фичу по имени или конструктору.
      * Удобно для межфичевого взаимодействия и работы с зависимостями.
      */
-    public getFeature<F extends FeatureLifecycle>(key: string | FeatureCtor<any, F, any>): F | undefined {
+    public getFeature<F extends FeatureLifecycle>(
+        key: string | FeatureCtor<any, F, any>
+    ): F | undefined {
         return this.findFeature(key) as F | undefined;
     }
 
@@ -84,7 +84,9 @@ export default abstract class Layout {
     private registerCleanup(cleanup: any) {
         if (!cleanup) return;
         if (typeof cleanup === "function") {
-            this.disposables.add(async () => { await cleanup(); });
+            this.disposables.add(async () => {
+                await cleanup();
+            });
         }
     }
     /**
@@ -174,7 +176,6 @@ export default abstract class Layout {
         }
     }
 
-
     /**
      * Доступ к корневому DOM-элементу (лениво создаётся при первом обращении).
      */
@@ -211,7 +212,9 @@ export default abstract class Layout {
             if (!f.afterRender) return;
             const out = f.afterRender(node);
             if (out && typeof (out as any).then === "function") {
-                throw new Error("FeatureLifecycle.afterRender() must be synchronous in current Layout.ensureRoot()");
+                throw new Error(
+                    "FeatureLifecycle.afterRender() must be synchronous in current Layout.ensureRoot()"
+                );
             }
             node = out;
         });
