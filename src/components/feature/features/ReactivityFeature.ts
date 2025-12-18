@@ -5,8 +5,12 @@ import type { FeatureLifecycle } from "@/components/feature/contracts/FeatureLif
 const _reactiveInitialised = Symbol("__reactiveInitialised");
 
 /**
- * Фича, которая включает реактивные поля, помеченные декоратором @reactive.
- * Работает один раз на инстанс, корректно оборачивает уже созданные сигналы.
+ * Реактивность как фича.
+ *
+ * - При инициализации инстанса один раз оборачивает поля, помеченные декоратором `@reactive`.
+ * - Поддерживает два случая: обычное значение (создаёт новый `signal`) и уже созданный сигнал
+ *   (функция с флагом `__isSignal`) — в этом случае просто проксирует getter/setter.
+ * - Использует конструкционное свойство `__reactiveProps`, которое заполняет декоратор.
  */
 export default class ReactivityFeature implements FeatureLifecycle<Layout> {
     static readonly featureName = "reactivity";

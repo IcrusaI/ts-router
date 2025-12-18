@@ -1,7 +1,7 @@
-import {ChildrenFeature, Page, withFeatures} from "@icrusai/ts-router";
+import {ChildrenFeature, ReactivityFeature, Page, withFeatures} from "@icrusai/ts-router";
 import ShellLayout from "../layouts/ShellLayout";
 
-export default class HomePage extends withFeatures(Page, ChildrenFeature) {
+export default class HomePage extends withFeatures(Page, ChildrenFeature, ReactivityFeature) {
 
 /*
     protected renderStructure() {

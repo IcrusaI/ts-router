@@ -3,11 +3,20 @@ import { collectFeatureSpecs, type FeatureFields, type FeatureSpec, USE_FEATURES
 
 type AnyCtor<TInstance = unknown, TArgs extends any[] = any[]> = abstract new (...args: TArgs) => TInstance;
 
+/** Конструктор, дополненный полями фич (инстанс + сохраняет статическую часть базового класса). */
 export type ClassWithFeatures<
     Ctor extends AnyCtor,
     Specs extends readonly FeatureSpec[]
-> = abstract new (...args: ConstructorParameters<Ctor>) => InstanceType<Ctor> & FeatureFields<Specs>;
+> = AnyCtor<InstanceType<Ctor> & FeatureFields<Specs>, ConstructorParameters<Ctor>>;
 
+/**
+ * Миксин для подключения фич без декораторов.
+ * Складывает specs с наследуемыми, пишет их в конструктор и возвращает
+ * класс с проецированными полями фич.
+ *
+ * Пример:
+ *   class MyLayout extends withFeatures(Layout, ChildrenFeature) {}
+ */
 export function withFeatures<const Specs extends readonly FeatureSpec[], const Base extends AnyCtor<Layout>>(
     Base: Base,
     ...specs: Specs

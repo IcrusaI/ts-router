@@ -11,16 +11,18 @@ import {FeatureCtor, FeatureLifecycle} from "@/components/feature/contracts/Feat
 export type Hook = void | Promise<void>;
 
 /**
- * Базовый минимальный layout-ядро без фреймворка.
+ * Базовое ядро Layout без фреймворка.
  *
  * Возможности:
- * - Lazy-инициализация DOM через переопределяемый {@link renderStructure};
- * - Монтирование/демонтаж с асинхронными хуками жизненного цикла;
- * - Система плагинов/фич ({@link with}), которые доступны как поля экземпляра;
- * - Управление состоянием (`setState`) и безопасные DOM-подписки (`addEvent`);
- * - Композиция: {@link renderStructure} может вернуть другой layout
- *   ({@link Layout}); его монтирование произойдёт автоматически,
- *   **но для каскадного destroy должен быть подключён ChildrenFeature**.
+ * - ленивое построение DOM через переопределяемый {@link renderStructure};
+ * - монтирование/демонтаж с хуками жизненного цикла;
+ * - система фич через {@link withFeatures}, фичи доступны как поля экземпляра;
+ * - безопасные подписки на DOM через {@link addEvent};
+ * - композиция: {@link renderStructure} может вернуть другой {@link Layout}
+ *   (для каскадного destroy нужна фича {@link ChildrenFeature}).
+ *
+ * Реактивность не встроена по умолчанию: для работы декоратора `@reactive`
+ * необходимо подключить фичу {@link ReactivityFeature}.
  */
 export default abstract class Layout {
     /** Корневой DOM-элемент компонента (создаётся при первом обращении). */
