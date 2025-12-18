@@ -79,10 +79,11 @@ const app = document.getElementById("app")!;
 Router.register("/", () => HomePage);
 Router.register("/about", () => import("./pages/AboutPage"));
 
-Router.setNotFound(() => import("./pages/NotFoundPage"));
-Router.setErrorPage(() => import("./pages/ErrorPage"));
-
-Router.init(app, { defaultTitle: "My App" });
+Router.init(app, {
+  defaultTitle: "My App",
+  notFound: () => import("./pages/NotFoundPage"),
+  errorPage: () => import("./pages/ErrorPage"),
+});
 ```
 
 ---
@@ -103,6 +104,7 @@ Router.init(app, { defaultTitle: "My App" });
 
 - init() — старт роутера (обработчик popstate + первый рендер).
 
+Опционально можно передать 404 и error‑страницы прямо в `init` через `notFound` / `errorPage`.
 
 
 

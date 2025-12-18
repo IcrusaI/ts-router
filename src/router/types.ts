@@ -29,6 +29,10 @@ export interface RouterOptions {
     basePath?: string;
     /** Заголовок по умолчанию, если страница ничего не вернула. */
     defaultTitle?: string;
+    /** Провайдер 404 страницы. */
+    notFound?: PageResolver;
+    /** Провайдер страницы ошибок. */
+    errorPage?: PageResolver;
 }
 
 /** Минимальный набор данных о маршруте (используется в middleware). */

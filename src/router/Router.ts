@@ -110,6 +110,8 @@ class Router {
         this.container = container;
         this.basePath = normalizeBase(opts.basePath ?? "/");
         this.defaultTitle = opts.defaultTitle ?? "App";
+        if (opts.notFound) this.notFoundPage = this.wrapProvider(opts.notFound);
+        if (opts.errorPage) this.errorPage = this.wrapProvider(opts.errorPage);
 
         void this.eventScope.flush();
 
