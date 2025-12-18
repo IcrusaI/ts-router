@@ -1,3 +1,12 @@
+## [2.0.0](https://github.com/IcrusaI/ts-router/compare/v1.1.1...v2.0.0) (2025-12-18)
+
+### ⚠ BREAKING CHANGES
+
+* изменены точки входа и типы — Router/Page/Layout теперь импортируются из src/router и src/components, старые классы и опции удалены; обновите маршруты, middleware и импорты,
+  пересоберите проект.
+
+* • feat!: переписать ядро роутинга, страницы и систему фич ([454b4f4](https://github.com/IcrusaI/ts-router/commit/454b4f441db38fc6d459e88527d0f40142d7ad98))
+
 ## [1.1.1](https://github.com/IcrusaI/ts-router/compare/v1.1.0...v1.1.1) (2025-10-29)
 
 ### Bug Fixes
