@@ -17,13 +17,16 @@ export type FeatureNameFromSpec<S extends FeatureSpec> = S extends FeatureCtor<L
             : never
         : never;
 
-export type FeatureInstanceFromSpec<S extends FeatureSpec> = S extends FeatureCtor<Layout, infer I>
-    ? I
-    : S extends { feature: infer F }
-        ? F extends FeatureCtor<Layout, infer Instance>
-            ? Instance
-            : never
-        : never;
+export type FeatureInstanceFromSpec<S extends FeatureSpec> =
+    // Передан конструктор напрямую
+    S extends FeatureCtor<Layout, any, any>
+        ? InstanceType<S>
+        // Передан объект { feature: Ctor }
+        : S extends { feature: infer F }
+            ? F extends FeatureCtor<Layout, any, any>
+                ? InstanceType<F>
+                : never
+            : never;
 
 export type FeatureFields<Specs extends readonly FeatureSpec[]> = {
     [K in Specs[number] as FeatureNameFromSpec<K>]: FeatureInstanceFromSpec<K>;
