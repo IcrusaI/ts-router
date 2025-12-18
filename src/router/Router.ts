@@ -108,10 +108,7 @@ class Router {
      */
     public init(container: Element, opts: RouterOptions = {}): Router {
         this.container = container;
-        this.basePath = normalizeBase(opts.basePath ?? "/");
-        this.defaultTitle = opts.defaultTitle ?? "App";
-        if (opts.notFound) this.notFoundPage = this.wrapProvider(opts.notFound);
-        if (opts.errorPage) this.errorPage = this.wrapProvider(opts.errorPage);
+        this.configure(opts);
 
         void this.eventScope.flush();
 
@@ -124,6 +121,29 @@ class Router {
             .then(() => this.interceptLinks())
 
         return this;
+    }
+
+    /**
+     * Обновляет параметры роутера после инициализации.
+     *
+     * Можно вызывать многократно, чтобы сменить basePath, defaultTitle или
+     * провайдеры notFound/error страниц.
+     */
+    public configure(opts: RouterOptions): void {
+        if (opts.basePath !== undefined) {
+            this.basePath = normalizeBase(opts.basePath);
+        } else if (!this.basePath) {
+            this.basePath = "/";
+        }
+
+        if (opts.defaultTitle !== undefined) {
+            this.defaultTitle = opts.defaultTitle;
+        } else if (!this.defaultTitle) {
+            this.defaultTitle = "App";
+        }
+
+        if (opts.notFound) this.notFoundPage = this.wrapProvider(opts.notFound);
+        if (opts.errorPage) this.errorPage = this.wrapProvider(opts.errorPage);
     }
 
     /* =========================   API   ================================= */
@@ -159,24 +179,6 @@ class Router {
             loadPage: this.wrapProvider(provider),
             opts,
         });
-    }
-
-    /**
-     * Назначает страницу 404 (not found).
-     *
-     * @param provider Провайдер 404-страницы (синхронный класс или динамический import).
-     */
-    public setNotFound(provider: PageResolver): void {
-        this.notFoundPage = this.wrapProvider(provider);
-    }
-
-    /**
-     * Назначает страницу ошибок (error page).
-     *
-     * @param provider Провайдер error-страницы (синхронный класс или динамический import).
-     */
-    public setErrorPage(provider: PageResolver): void {
-        this.errorPage = this.wrapProvider(provider);
     }
 
     /**

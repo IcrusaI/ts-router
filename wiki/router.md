@@ -13,6 +13,10 @@ Router.init(container, {
 
 Параметры: см. `RouterOptions` (basePath, defaultTitle, notFound, errorPage).
 
+### Обновление настроек после запуска
+
+`Router.configure(opts)` — единый способ поменять basePath/defaultTitle/notFound/errorPage в рантайме.
+
 ## Регистрация маршрутов
 
 ```ts
@@ -58,8 +62,7 @@ Guard получает `CurrentRoute` для `to` и `from`. Возврат `fal
 
 ## Специальные страницы
 
-- Рекомендуемый способ — передать `notFound` / `errorPage` в `Router.init`.
-- Методы `Router.setNotFound` и `Router.setErrorPage` остаются для динамической замены.
+- Рекомендуемый способ — передать `notFound` / `errorPage` в `Router.init` или вызвать `Router.configure`.
 
 ## Авто‑перехват ссылок
 

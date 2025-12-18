@@ -96,15 +96,11 @@ Router.init(app, {
 
 - register(pattern, provider, opts?) — регистрирует маршрут.
 
-- setNotFound(provider) — задаёт 404-страницу.
-
-- setErrorPage(provider) — задаёт error-страницу.
-
 - navigate(to, opts?) — программная навигация.
 
-- init() — старт роутера (обработчик popstate + первый рендер).
+- init(container, opts?) — старт роутера (popstate, первый рендер, настройка notFound/error).
 
-Опционально можно передать 404 и error‑страницы прямо в `init` через `notFound` / `errorPage`.
+- configure(opts) — обновить basePath/defaultTitle/notFound/errorPage после init.
 
 
 

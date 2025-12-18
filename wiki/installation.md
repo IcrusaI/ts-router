@@ -35,6 +35,11 @@ Router.init(app, {
   notFound: () => import("./NotFoundPage"),
   errorPage: () => import("./ErrorPage"),
 });
+
+// позже можно обновить опции
+Router.configure({
+  defaultTitle: "Demo v2",
+});
 ```
 
 ## Архитектура по верхам

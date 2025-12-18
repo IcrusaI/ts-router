@@ -71,8 +71,6 @@ class LoginPage extends withFeatures(Page, TemplateFeature) {
 Router.init(app, {
   basePath: "/app",
   defaultTitle: "Admin",
-  notFound: () => import("./pages/NotFoundPage"),
-  errorPage: () => import("./pages/ErrorPage"),
 });
 Router.register("/users/:id", () => import("./pages/UserPage"));
 // итоговый URL: /app/users/42
