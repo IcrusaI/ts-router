@@ -2,7 +2,7 @@ import Page from "@/components/Page";
 import ParsedRoute from "@/router/ParsedRoute";
 import RouterOptions from "@/router/RouterOptions";
 import RouteOptions from "@/router/RouteOptions";
-import NavigationTarget from "@/router/NavigationTarget";
+import NavigationTarget, {CurrentRoute} from "@/router/NavigationTarget";
 import {PageClass, PageResolver} from "@/router/contracts/PageContracts";
 import DisposableScope from "@/utils/disposables";
 import normalizeBase from "@/utils/NormalizeBase";
@@ -217,12 +217,18 @@ class Router {
         if (!match) return this.show404();
 
         const search = url.search || "";
-        const toTarget: NavigationTarget = {
+        const hash = url.hash || "";
+        const toTarget: CurrentRoute = {
             path: destPath,
             params: match.params,
             meta: match.opts,
             query: new URLSearchParams(search),
             queryObj: Object.fromEntries(new URLSearchParams(search)),
+            pattern: match.pattern,
+            hash,
+            fullPath: destPath + search + hash,
+            href: this.withBase(destPath) + search + hash,
+            basePath: this.basePath,
         };
         const fromTarget = await this.resolveCurrentTarget();
 
@@ -237,10 +243,8 @@ class Router {
         }
 
         // История
-        const href =
-            this.withBase(destPath) + (url.search || "") + (url.hash || "");
-        if (replace) history.replaceState({}, "", href);
-        else history.pushState({}, "", href);
+        if (replace) history.replaceState({}, "", toTarget.href);
+        else history.pushState({}, "", toTarget.href);
 
         // Защита от гонок навигации
         const myToken = ++this.navToken;
@@ -251,6 +255,7 @@ class Router {
             if (myToken !== this.navToken) return;
 
             const page = new PageClass();
+            page.route = toTarget;
             await this.mountPage(page);
 
             // Скролл
@@ -305,21 +310,26 @@ class Router {
      * @returns Текущая цель навигации (path/params/meta/query).
      * @internal
      */
-    private async resolveCurrentTarget(): Promise<NavigationTarget> {
-        const path = this.normalize(
-            window.location.pathname +
-            window.location.search +
-            window.location.hash
-        );
+    private async resolveCurrentTarget(): Promise<CurrentRoute> {
+        const pathWithExtras = window.location.pathname + window.location.search + window.location.hash;
+        const path = this.normalize(pathWithExtras);
         const qs = window.location.search;
+        const hash = window.location.hash;
         const m = this.match(path);
+
+        const query = new URLSearchParams(qs);
 
         return {
             path,
             params: m?.params ?? {},
             meta: m?.opts ?? {},
-            query: new URLSearchParams(qs),
-            queryObj: Object.fromEntries(new URLSearchParams(qs)),
+            query,
+            queryObj: Object.fromEntries(query),
+            pattern: m?.pattern ?? path,
+            hash,
+            fullPath: path + qs + hash,
+            href: window.location.pathname + window.location.search + window.location.hash,
+            basePath: this.basePath,
         };
     }
 
