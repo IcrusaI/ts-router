@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import {reactive} from "@/utils/decorators";
-import type {CurrentRoute} from "@/router/NavigationTarget";
+import type {CurrentRoute} from "@/router/types";
 
 /**
  * Базовый класс страницы поверх {@link Layout}.

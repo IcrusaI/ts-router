@@ -1,9 +1,13 @@
 import Page from "@/components/Page";
-import ParsedRoute from "@/router/ParsedRoute";
-import RouterOptions from "@/router/RouterOptions";
-import RouteOptions from "@/router/RouteOptions";
-import NavigationTarget, {CurrentRoute} from "@/router/NavigationTarget";
-import {PageClass, PageResolver} from "@/router/contracts/PageContracts";
+import {
+    ParsedRoute,
+    RouterOptions,
+    RouteOptions,
+    NavigationTarget,
+    CurrentRoute,
+    PageClass,
+    PageResolver,
+} from "@/router/types";
 import DisposableScope from "@/utils/disposables";
 import normalizeBase from "@/utils/NormalizeBase";
 import safeDecodeURI from "@/utils/SafeDecodeURI";
