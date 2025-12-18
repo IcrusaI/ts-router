@@ -1,63 +1,3 @@
-/* ======================================================================= *
- *  Router.ts — лёгкий SPA-router с middleware, редиректами и error-page   *
- *                                                                         *
- *  ▸ Динамические параметры ("/post/:slug")                               *
- *  ▸ Navigation guards (middlewares)                                      *
- *  ▸ Redirect-роуты                                                       *
- *  ▸ Страницы 404/ERROR                                                   *
- *  ▸ Авто-скролл + поддержка #якорей                                      *
- *  ▸ Полностью асинхронный life-cycle Page-компонентов                    *
- *  ▸ Защита от гонок навигации (navToken)                                 *
- * ======================================================================= */
-
-/**
- * @fileoverview
- * Минималистичный SPA-роутер без фреймворков. Управляет историей браузера,
- * матчингом путей, обработкой middleware, редиректами и монтированием
- * страниц на основе базового класса {@link Page}.
- *
- * Основные сущности:
- * - {@link Router} — центральный класс маршрутизации;
- * - {@link Page} — базовый класс страницы, умеет монтироваться/размонтироваться;
- * - {@link ParsedRoute} — скомпилированный маршрут (RegExp + имена параметров);
- * - {@link NavigationTarget} — “куда/откуда идём” (path/params/query/meta).
- *
- * Особенности реализации:
- * - Предотвращение гонок навигации через токен {@link Router.navToken}.
- * - Перехват кликов по `<a>` для SPA-навигации (внутренние ссылки).
- * - Нормализация путей с учётом `basePath`, очисткой лишних `/`.
- * - Авто-скролл к якорям (`#hash`) и сброс прокрутки при обычных переходах.
- *
- * @example Базовое использование
- * ```ts
- * import Router from "@/router/Router";
- * import NotFoundPage from "@/components/NotFoundPage";
- *
- * const router = new Router(document.getElementById("app")!, {
- *   basePath: "/",
- *   defaultTitle: "My App",
- * });
- *
- * // Регистрация маршрутов
- * router.register("/", () => import("@/pages/HomePage"));
- * router.register("/users/:id", () => import("@/pages/UserPage"), {
- *   middlewares: [
- *     async (to) => {
- *       // Пример проверки: id обязателен
- *       return Boolean(to.params.id);
- *     },
- *   ],
- * });
- *
- * // 404 и error-страницы
- * router.setNotFound(() => NotFoundPage);
- * router.setErrorPage(() => import("@/pages/ErrorPage"));
- *
- * // Старт
- * router.init();
- * ```
- */
-
 import Page from "@/components/Page";
 import ParsedRoute from "@/router/ParsedRoute";
 import RouterOptions from "@/router/RouterOptions";
@@ -72,22 +12,15 @@ import safeDecodeURIComponent from "@/utils/SafeDecodeURIComponent";
 /**
  * Центральный класс маршрутизации приложения.
  *
- * Выполняет:
- * 1) парсинг и хранение конфигурации маршрутов;
- * 2) сопоставление текущего `location.pathname` с зарегистрированными паттернами;
- * 3) последовательный запуск middleware-хуков для “гвардов”;
- * 4) редиректы на уровне маршрутов;
- * 5) создание/монтаж/размонтаж экземпляров страниц {@link Page};
- * 6) обновление `document.title` на основании `Page.getTitle()`;
- * 7) управление историей браузера (`pushState`/`replaceState`) и intercept `<a>`.
+ * Делает:
+ * - хранит зарегистрированные паттерны и подбирает подходящий по URL;
+ * - последовательно запускает middleware (гварды) перед монтированием страницы;
+ * - поддерживает redirect-роуты и страницы 404/ошибок;
+ * - монтирует/размонтирует экземпляры {@link Page};
+ * - синхронизирует `document.title` с реактивным полем `page.title`;
+ * - обновляет историю (`pushState`/`replaceState`) и перехватывает `<a>`.
  */
 class Router {
-    private static _instance: Router = new Router();
-
-    public static get instance(): Router {
-        return this._instance;
-    }
-
     /* ======================   PRIVATE FIELDS   ======================= */
 
     /**
@@ -426,35 +359,8 @@ class Router {
     }
 
     /**
-     * Корректно размонтирует предыдущую страницу и монтирует новую в контейнер,
-     * а также выполняет реактивную синхронизацию заголовка документа.
-     *
-     * ## Логика работы:
-     * 1. Если ранее был установлен эффект синхронизации заголовка —
-     *    он удаляется (чтобы избежать утечек и дублирования).
-     * 2. Текущая страница (`currentPage`), если существует, уничтожается
-     *    вызовом {@link Page.destroy}.
-     * 3. Новая страница монтируется в основной контейнер приложения
-     *    методом {@link Page.mountTo}.
-     * 4. Устанавливается реактивный эффект {@link effect}, который:
-     *    - подписывается на сигнал {@link Page.title};
-     *    - автоматически обновляет `document.title` при каждом изменении заголовка;
-     *    - сбрасывает заголовок на `defaultTitle`, если значение пустое.
-     * 5. Эффект добавляется в {@link titleScope}, поэтому при следующем переходе
-     *    все связанные подписки снимаются одним вызовом `flush()`.
-     *
-     * @param page Экземпляр страницы, которую требуется смонтировать.
-     * @returns Промис, завершающийся после монтирования страницы
-     *          и установки эффекта синхронизации заголовка.
-     *
-     * @example
-     * ```ts
-     * const userPage = new UserPage();
-     * await router.mountPage(userPage);
-     * // document.title теперь всегда синхронизирован с userPage.title$()
-     * ```
-     *
-     * @internal
+     * Размонтирует предыдущую страницу, монтирует новую
+     * и подписывает `document.title` на `page.title`.
      */
     private async mountPage(page: Page): Promise<void> {
         await this.titleScope.flush();

@@ -18,11 +18,6 @@ export type Hook = void | Promise<void>;
  * - монтирование/демонтаж с хуками жизненного цикла;
  * - система фич через {@link withFeatures}, фичи доступны как поля экземпляра;
  * - безопасные подписки на DOM через {@link addEvent};
- * - композиция: {@link renderStructure} может вернуть другой {@link Layout}
- *   (для каскадного destroy нужна фича {@link ChildrenFeature}).
- *
- * Реактивность не встроена по умолчанию: для работы декоратора `@reactive`
- * необходимо подключить фичу {@link ReactivityFeature}.
  */
 export default abstract class Layout {
     /** Корневой DOM-элемент компонента (создаётся при первом обращении). */
@@ -170,7 +165,6 @@ export default abstract class Layout {
                 this.registerCleanup(c);
             });
 
-            // cleanup-и afterDestroy
             await this.disposables.flush();
 
             await this.unmounted?.();
@@ -178,8 +172,6 @@ export default abstract class Layout {
             // если не смонтирован — всё равно снять cleanup-и (effects и т.п.)
             await this.disposables.flush();
         }
-
-        await this.disposables.flush();
     }
 
 
@@ -206,7 +198,7 @@ export default abstract class Layout {
      *   (div[data-layout-host]) для родителя, а сам ребёнок откладывается
      *   до первого `mountTo()` (там произойдёт корректный attach в DOM).
      * - Если возвращён `HTMLElement`, он становится корнем.
-     * - В обоих случаях фичи получают событие {@link Feature.onRootCreated}.
+     * - В обоих случаях фичи получают событие {@link FeatureLifecycle.onRootCreated}.
      *
      * @throws Если {@link renderStructure} вернул неподдерживаемый тип.
      */

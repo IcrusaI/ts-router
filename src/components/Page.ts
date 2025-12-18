@@ -1,42 +1,18 @@
 import Layout from "@/components/Layout";
 import {reactive} from "@/utils/decorators";
-import {withFeatures} from "@/components/feature/UseFeatures";
-import ReactivityFeature from "@/components/feature/features/ReactivityFeature";
 
 /**
- * =======================================================================
- * Page.ts — базовый класс страницы приложения
- * =======================================================================
+ * Базовый класс страницы поверх {@link Layout}.
  *
- * @fileoverview
- * Абстракция «страницы» поверх {@link Layout}: добавляет обязательный
- * заголовок вкладки (через {@link getTitle}) и удобные геттеры для доступа
- * к параметрам query-строки текущего URL.
+ * Добавляет обязательное поле {@link title}, которое синхронизируется с
+ * `document.title`, и удобные геттеры для query‑строки.
  *
- * Зачем нужен отдельный класс:
- *  - единый контракт на заголовок документа (`document.title`);
- *  - единое место для доступа к `URLSearchParams`;
- *  - совместимость с `Router`, который после монтирования страницы
- *    вызывает `page.getTitle()` и устанавливает `document.title`.
- *
- * Как использовать:
  * ```ts
- * export default class UserPage extends Page<"content"> {
- *   public getTitle(): string {
- *     const id = this.query.get("id") ?? "—";
- *     return `User ${id}`;
- *   }
- *   protected renderStructure(): HTMLElement {
- *     const el = document.createElement("div");
- *     el.innerHTML = `<h1>User page</h1>`;
- *     return el;
- *   }
+ * export default class UserPage extends Page {
+ *   created() { this.title = "User"; }
+ *   protected renderStructure() { return document.createElement("section"); }
  * }
  * ```
- *
- * @template TSlots Строковый литеральный тип допустимых имён слотов
- * (наследуется от {@link Layout} и позволяет типобезопасно вызывать
- * {@link Layout.setSlot}).
  */
 export default abstract class Page extends Layout {
     @reactive

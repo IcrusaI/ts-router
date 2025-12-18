@@ -56,7 +56,9 @@ npm install @icrusai/ts-router
 import Page from "ts-router/Page";
 
 export default class HomePage extends Page {
-  getTitle() { return "Главная"; }
+  created() {
+    this.title = "Главная";
+  }
 
   protected renderStructure() {
     const el = document.createElement("div");
@@ -69,20 +71,18 @@ export default class HomePage extends Page {
 ### **2) Настраиваем роутер**
 
 ```ts
-import Router from "ts-router/Router";
+import { Router } from "ts-router";
 import HomePage from "./pages/HomePage";
 
 const app = document.getElementById("app")!;
 
-const router = new Router(app, { defaultTitle: "My App" });
+Router.register("/", () => HomePage);
+Router.register("/about", () => import("./pages/AboutPage"));
 
-router.register("/", () => HomePage);
-router.register("/about", () => import("./pages/AboutPage"));
+Router.setNotFound(() => import("./pages/NotFoundPage"));
+Router.setErrorPage(() => import("./pages/ErrorPage"));
 
-router.setNotFound(() => import("./pages/NotFoundPage"));
-router.setErrorPage(() => import("./pages/ErrorPage"));
-
-router.init();
+Router.init(app, { defaultTitle: "My App" });
 ```
 
 ---
@@ -108,7 +108,7 @@ router.init();
 
 ### **Page**
 
-- getTitle() — заголовок вкладки.
+- title — строка, синхронизируемая с document.title.
 
 - query — объект URLSearchParams.
 
@@ -126,8 +126,6 @@ router.init();
 - beforeMount / afterMount — до и после вставки в DOM.
 
 - beforeUnmount / unmounted — до и после удаления.
-
-- update — при setState (если нужно обновление UI).
 
 
 ---
