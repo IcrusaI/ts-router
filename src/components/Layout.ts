@@ -3,23 +3,6 @@ import DisposableScope from "@/utils/disposables";
 import { buildFeaturePlan, collectFeatureSpecs } from "@/components/feature/featureSpecs";
 import {FeatureCtor, FeatureLifecycle} from "@/components/feature/contracts/FeatureLifecycle";
 
-/**
- * Internal symbol used to mark whether reactive properties have been
- * initialised on a CoreLayout instance. This symbol lives outside of the
- * class definition to avoid collisions on `this` and to keep it
- * non-enumerable.
- */
-const _reactiveInitialised = Symbol("__reactiveInitialised");
-
-/**
- * Helper interface describing a constructor function that may carry
- * reactive metadata. Classes decorated with {@link reactive} attach a
- * `__reactiveProps` set to their constructor to record which properties
- * were decorated.
- */
-interface ReactiveConstructor extends Function {
-  __reactiveProps?: Set<string>;
-}
 
 /**
  * Тип возвращаемого значения для асинхронных хуков жизненного цикла.
@@ -98,80 +81,6 @@ export default abstract class Layout {
 
     private forEachFeature(cb: (feature: FeatureLifecycle<Layout>) => void) {
         for (const f of this.features.values()) cb(f);
-    }
-
-    /**
-     * Once per-instance routine to upgrade declared fields into reactive
-     * properties. Fields that start with a dollar sign (`$`) or that were
-     * decorated with the `@reactive` decorator will be converted into
-     * getters/setters backed by a signal. This method is called lazily
-     * just before the first template is rendered, so that class field
-     * initialisers in derived classes have already executed. It avoids
-     * scanning repeatedly by marking the instance with a private symbol.
-     */
-    private ensureReactiveProps(): void {
-        // Only run once per instance
-        if ((this as any)[_reactiveInitialised]) return;
-        (this as any)[_reactiveInitialised] = true;
-
-        // Gather property names explicitly marked via @reactive
-        const ctor: ReactiveConstructor = (this as any).constructor;
-        const marked: Set<string> = ctor.__reactiveProps ?? new Set<string>();
-
-        // Names which should never be made reactive (framework internals).  
-        // "title" is handled specially by Page and has its own signal.
-        const reserved = new Set<string>([
-            'state',
-            'children',
-            'slots',
-            'template',
-            'title',
-        ]);
-
-        // Iterate over own enumerable properties. Field initialisers are
-        // defined on the instance, so they will show up here. Methods live
-        // on the prototype and will not be considered.
-        for (const key of Object.keys(this)) {
-            // Skip private/underscore-prefixed names and reserved names
-            if (key.startsWith('_')) continue;
-            if (reserved.has(key)) continue;
-
-            const value: any = (this as any)[key];
-
-            // Skip functions (methods) entirely
-            if (typeof value === 'function') continue;
-
-            // Determine whether this property should be reactive: either it
-            // begins with `$` or is present in the set of marked props
-            const shouldReactive = key.startsWith('$') || marked.has(key);
-            if (!shouldReactive) continue;
-
-            // If a getter/setter already exists, leave it as is
-            const desc = Object.getOwnPropertyDescriptor(this, key);
-            if (desc && (desc.get || desc.set)) continue;
-
-            // If the value itself is already a signal (created via signal()),
-            // simply proxy through to its getter/setter
-            if (typeof value === 'function' && (value as any).__isSignal) {
-                const sig = value as any;
-                Object.defineProperty(this, key, {
-                    get: () => sig(),
-                    set: (v: any) => sig.set(v),
-                    enumerable: true,
-                    configurable: true,
-                });
-                continue;
-            }
-
-            // Otherwise create a new signal wrapping the current value
-            const sig = signal(value);
-            Object.defineProperty(this, key, {
-                get: () => sig(),
-                set: (v: any) => sig.set(v),
-                enumerable: true,
-                configurable: true,
-            });
-        }
     }
 
     // —— lifecycle ————————————————————————————————————————————————
@@ -300,26 +209,19 @@ export default abstract class Layout {
      * @throws Если {@link renderStructure} вернул неподдерживаемый тип.
      */
     private ensureRoot(): void {
-        this.ensureReactiveProps();
         this.forEachFeature((f) => f.beforeRender?.());
 
         let node: any = this.renderStructure();
 
-        // Поскольку ensureRoot синхронный в текущей архитектуре,
-        // здесь deliberately оставляем afterRender синхронным по умолчанию.
-        // Если хочешь поддержать async afterRender — нужно сделать ensureRoot async.
-        // Поэтому здесь исполняем только sync-часть:
         this.forEachFeature((f) => {
             if (!f.afterRender) return;
             const out = f.afterRender(node);
-            // если фича вернула Promise — это ошибка конфигурации (см. комментарий выше)
             if (out && typeof (out as any).then === "function") {
                 throw new Error("FeatureLifecycle.afterRender() must be synchronous in current Layout.ensureRoot()");
             }
             node = out;
         });
 
-        // ── 0) string html
         if (typeof node === "string") {
             const tpl = document.createElement("template");
             tpl.innerHTML = node.trim();
@@ -392,8 +294,6 @@ export default abstract class Layout {
     protected beforeUnmount?(): Hook;
     /** Хук: после удаления корня из DOM. */
     protected unmounted?(): Hook;
-    /** Пользовательский «ручной» апдейт, вызывается из {@link setState}. */
-    protected update?(): void;
 }
 
 export function isLayout(value: unknown): value is Layout {

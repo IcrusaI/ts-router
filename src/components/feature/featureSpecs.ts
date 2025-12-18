@@ -1,5 +1,6 @@
 import type Layout from "@/components/Layout";
 import type { FeatureCtor, FeatureLifecycle } from "@/components/feature/contracts/FeatureLifecycle";
+import ReactivityFeature from "@/components/feature/features/ReactivityFeature";
 
 export type FeatureRequest = { name?: string; feature: FeatureCtor<Layout, FeatureLifecycle, string> };
 export type FeatureSpec = FeatureRequest | FeatureCtor<Layout, FeatureLifecycle, string>;
@@ -44,6 +45,15 @@ export function collectFeatureSpecs(ctor: Function): FeatureSpec[] {
         const specs = (cur as { [USE_FEATURES_KEY]?: FeatureSpec[] })[USE_FEATURES_KEY];
         if (specs) out.push(...specs);
         cur = Object.getPrototypeOf(cur);
+    }
+    // если класс требует реактивность, но она не подключена явно — добавляем по умолчанию
+    const ctorAny = ctor as any;
+    if (ctorAny[Symbol.for("@@reactivityRequired")]) {
+        const has = out.some((s) => {
+            const fx = typeof s === "function" ? s : s.feature;
+            return fx === ReactivityFeature || fx.featureName === ReactivityFeature.featureName;
+        });
+        if (!has) out.push(ReactivityFeature);
     }
     return out;
 }

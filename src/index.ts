@@ -11,3 +11,4 @@ export { withFeatures } from "@/components/feature/UseFeatures";
 export { default as ChildrenFeature } from "@/components/feature/features/ChildrenFeature";
 export { default as SlotsFeature } from "@/components/feature/features/SlotsFeature";
 export { default as TemplateFeature } from "@/components/feature/features/TemplateFeature";
+export { default as ReactivityFeature } from "@/components/feature/features/ReactivityFeature";

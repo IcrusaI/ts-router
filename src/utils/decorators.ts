@@ -1,4 +1,5 @@
 import { signal } from "@/utils/reactive";
+const REACTIVE_REQ = Symbol.for("@@reactivityRequired");
 
 /**
  * Декоратор, помечающий поле класса как реактивное.
@@ -41,12 +42,14 @@ export function reactive(...args: any[]): any {
     const propertyKey = args[1] as string;
     interface ReactiveCtor extends Function {
       __reactiveProps?: Set<string>;
+      [REACTIVE_REQ]?: boolean;
     }
     const ctor = target.constructor as ReactiveCtor;
     if (!ctor.__reactiveProps) {
       ctor.__reactiveProps = new Set<string>();
     }
     ctor.__reactiveProps.add(propertyKey);
+    ctor[REACTIVE_REQ] = true;
     return;
   }
   // Новый синтаксис: (initialValue: any, context: ClassFieldDecoratorContext)
@@ -58,6 +61,10 @@ export function reactive(...args: any[]): any {
   context.addInitializer(function initReactive(this: any) {
     const name = context.name as string;
     const current = this[name];
+    // помечаем, что для класса требуется фича reactivity
+    if (this.constructor && typeof this.constructor === "function") {
+      (this.constructor as any)[REACTIVE_REQ] = true;
+    }
     const sig = signal(current);
     Object.defineProperty(this, name, {
       get() {
